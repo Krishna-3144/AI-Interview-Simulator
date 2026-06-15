@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Interview Simulator</title>
+<link rel="stylesheet" href="/static/css/style.css"/>
+</head>
+<body>
+<div class="page-center">
+  <div class="card upload-card">
+    <div class="logo">🤖</div>
+    <h1>AI Interview Simulator</h1>
+    <p class="subtitle">Upload your resume to begin an adaptive AI-powered technical interview</p>
+
+    <div class="features">
+      <div class="feature"><span>🧠</span> Adaptive follow-up questions</div>
+      <div class="feature"><span>🎙️</span> Voice or text answers</div>
+      <div class="feature"><span>📊</span> Deep performance analytics</div>
+      <div class="feature"><span>🔍</span> Contradiction detection</div>
+    </div>
+
+    <form id="uploadForm">
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="resumeFile" accept=".pdf" hidden/>
+        <div class="upload-icon">📄</div>
+        <p id="uploadText">Click to upload your resume (PDF)</p>
+        <p class="upload-hint">or drag and drop here</p>
+      </div>
+
+      <div id="fileSelected" class="file-selected hidden">
+        <span class="file-icon">✅</span>
+        <span id="fileName"></span>
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="startBtn" disabled>
+        Start Interview
+      </button>
+    </form>
+
+    <div id="loading" class="loading hidden">
+      <div class="spinner"></div>
+      <p>Analysing your resume and preparing interview...</p>
+    </div>
+
+    <div id="error" class="error-msg hidden"></div>
+  </div>
+</div>
+
+<script>
+const uploadZone = document.getElementById('uploadZone');
+const fileInput  = document.getElementById('resumeFile');
+const startBtn   = document.getElementById('startBtn');
+const fileSelected = document.getElementById('fileSelected');
+const fileName   = document.getElementById('fileName');
+const uploadText = document.getElementById('uploadText');
+const loading    = document.getElementById('loading');
+const errorDiv   = document.getElementById('error');
+const form       = document.getElementById('uploadForm');
+
+uploadZone.addEventListener('click', () => fileInput.click());
+
+uploadZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  uploadZone.classList.add('drag-over');
+});
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type === 'application/pdf') setFile(file);
+});
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) setFile(fileInput.files[0]);
+});
+
+function setFile(file) {
+  fileInput._file = file;
+  fileName.textContent = file.name;
+  fileSelected.classList.remove('hidden');
+  uploadText.textContent = 'Resume selected';
+  startBtn.disabled = false;
+}
+
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  const file = fileInput._file || fileInput.files[0];
+  if (!file) return;
+
+  loading.classList.remove('hidden');
+  form.classList.add('hidden');
+  errorDiv.classList.add('hidden');
+
+  const fd = new FormData();
+  fd.append('resume', file);
+
+  try {
+    const res = await fetch('/api/sessions', { method: 'POST', body: fd });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    // Store session data and redirect
+    sessionStorage.setItem('session_id', data.session_id);
+    sessionStorage.setItem('candidate', JSON.stringify(data.candidate));
+    sessionStorage.setItem('first_question', data.first_question);
+    sessionStorage.setItem('first_topic', data.topic || '');
+    sessionStorage.setItem('first_difficulty', data.difficulty || 2);
+    sessionStorage.setItem('first_explanation', data.explanation || '');
+    window.location.href = '/interview';
+  } catch (err) {
+    loading.classList.add('hidden');
+    form.classList.remove('hidden');
+    errorDiv.textContent = 'Error: ' + err.message;
+    errorDiv.classList.remove('hidden');
+  }
+});
+</script>
+</body>
+</html>

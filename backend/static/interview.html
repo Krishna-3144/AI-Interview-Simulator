@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Interview — AI Interview Simulator</title>
+<link rel="stylesheet" href="/static/css/style.css?v=1.0.1"/>
+</head>
+<body>
+<!-- Header -->
+<header class="interview-header">
+  <div class="header-left">
+    <span class="logo-small">🤖</span>
+    <span>AI Interview Simulator</span>
+  </div>
+  <div class="header-right">
+    <button class="btn btn-outline btn-danger-outline" id="endInterviewBtn" onclick="endInterview()">End Interview</button>
+    <span class="badge" id="topicBadge">Loading...</span>
+    <span class="difficulty-badge" id="diffBadge">●●○○○</span>
+    <span id="candidateName" class="candidate-name"></span>
+  </div>
+</header>
+
+<div class="interview-layout">
+
+  <!-- Left: Conversation history -->
+  <div class="history-panel">
+    <h3>Conversation</h3>
+    <div id="history" class="history-list"></div>
+  </div>
+
+  <!-- Main: Active interview -->
+  <div class="main-panel">
+
+    <!-- Question card -->
+    <div class="question-card" id="questionCard">
+      <div class="question-meta">
+        <span class="q-label">Question</span>
+        <span class="follow-up-badge hidden" id="followUpBadge">Follow-up</span>
+      </div>
+      <p id="questionText" class="question-text">Loading your first question...</p>
+      <div class="explanation-box" id="explanationBox" style="display:none">
+        <span class="explain-label">💡 Why this question:</span>
+        <span id="explanationText"></span>
+      </div>
+    </div>
+
+    <!-- Contradiction alert -->
+    <div id="contradictionAlert" class="contradiction-alert hidden">
+      ⚠️ Contradiction detected — the interviewer noticed an inconsistency in your answers.
+    </div>
+
+    <!-- Answer area -->
+    <div class="answer-section">
+      <div class="answer-header-row">
+        <div class="input-mode-tabs">
+          <button class="mode-tab active" id="textTab" onclick="setMode('text')">⌨️ Type</button>
+          <button class="mode-tab" id="audioTab" onclick="setMode('audio')">🎙️ Voice</button>
+        </div>
+        <div class="skip-controls">
+          <button class="btn btn-outline btn-sm" id="skipFollowupBtn" onclick="skipFollowup()" title="Skip follow-up questions">Skip Follow-up</button>
+          <button class="btn btn-outline btn-sm" id="skipTopicBtn" onclick="skipTopic()" title="Skip this topic">Skip Topic</button>
+        </div>
+      </div>
+
+      <!-- Text input -->
+      <div id="textMode">
+        <textarea id="answerText" class="answer-textarea"
+          placeholder="Type your answer here..." rows="5"></textarea>
+        <button class="btn btn-primary" id="submitTextBtn" onclick="submitText()">
+          Submit Answer →
+        </button>
+      </div>
+
+      <!-- Audio input -->
+      <div id="audioMode" style="display:none">
+        <div class="audio-controls">
+          <button class="btn btn-record" id="recordBtn" onclick="toggleRecord()">
+            🎙️ Start Recording
+          </button>
+          <div class="recording-indicator hidden" id="recordingIndicator">
+            <span class="rec-dot"></span> Recording...
+          </div>
+        </div>
+        <div id="transcriptPreview" class="transcript-preview hidden">
+          <strong>Transcript:</strong>
+          <p id="transcriptText"></p>
+        </div>
+        <button class="btn btn-primary hidden" id="submitAudioBtn" onclick="submitAudio()">
+          Submit Answer →
+        </button>
+      </div>
+    </div>
+
+    <!-- Thinking indicator -->
+    <div id="thinking" class="thinking hidden">
+      <div class="dots"><span></span><span></span><span></span></div>
+      <p>Evaluating your answer...</p>
+    </div>
+
+  </div>
+
+  <!-- Right: Live scores panel -->
+  <div class="scores-panel">
+    <h3>Live Feedback</h3>
+    <div id="scoresDisplay" class="scores-empty">
+      <p>Scores appear after your first answer</p>
+    </div>
+    <div id="confidenceDisplay" class="confidence-section hidden">
+      <h4>🎙️ Audio Analysis</h4>
+      <div id="confidenceMetrics"></div>
+    </div>
+    <button class="btn btn-outline" id="viewAnalysisBtn" onclick="openAnalysisModal()" style="width: 100%; margin-top: 20px;">🔍 View Detailed Analysis</button>
+  </div>
+
+</div>
+
+<!-- Detailed Analysis Modal -->
+<div id="analysisModal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>🔍 Turn-by-Turn Feedback Analysis</h2>
+      <button class="modal-close" onclick="closeAnalysisModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="analysisBody">
+      <div id="analysisDetails">
+        <p class="empty-msg">No responses analyzed yet. Submit an answer to view breakdown.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/interview.js?v=1.0.1"></script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Interview Report — AI Interview Simulator</title>
+<link rel="stylesheet" href="/static/css/style.css?v=1.0.1"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+<header class="report-header">
+  <span class="logo-small">🤖</span>
+  <span>Interview Report</span>
+  <button class="btn btn-outline" onclick="window.location.href='/'">New Interview</button>
+</header>
+
+<div class="report-layout">
+
+  <!-- Top: Candidate + Recommendation -->
+  <div class="report-hero">
+    <div class="hero-left">
+      <h1 id="candidateName">Candidate Name</h1>
+      <p id="targetRole" class="target-role"></p>
+      <p id="totalQuestions" class="meta-info"></p>
+    </div>
+    <div class="hero-right">
+      <div class="recommendation-badge" id="recBadge">—</div>
+      <div class="overall-score" id="overallScore">—</div>
+      <div class="score-label">Overall Score</div>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="report-card">
+    <h2>📋 Summary</h2>
+    <p id="summary"></p>
+  </div>
+
+  <!-- Charts row -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <h3>Topic Performance</h3>
+      <canvas id="topicChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>Score Breakdown</h3>
+      <canvas id="radarChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>Confidence Timeline</h3>
+      <canvas id="confidenceChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Details row -->
+  <div class="details-row">
+
+    <div class="report-card">
+      <h2>✅ Technical Strengths</h2>
+      <ul id="strengths"></ul>
+    </div>
+
+    <div class="report-card">
+      <h2>⚠️ Areas to Improve</h2>
+      <ul id="weaknesses"></ul>
+    </div>
+
+  </div>
+
+  <div class="report-card">
+    <h2>🗣️ Communication Assessment</h2>
+    <p id="communicationAssessment"></p>
+  </div>
+
+  <div class="report-card">
+    <h2>🎙️ Confidence & Delivery</h2>
+    <div class="confidence-grid" id="confidenceGrid"></div>
+    <p id="confidenceAssessment"></p>
+  </div>
+
+  <div class="report-card">
+    <h2>🧠 Behavioral Insights</h2>
+    <p id="behavioralInsights"></p>
+  </div>
+
+  <!-- Contradictions -->
+  <div class="report-card" id="contradictionsCard" style="display:none">
+    <h2>🔄 Contradictions Detected</h2>
+    <div id="contradictionsList"></div>
+  </div>
+
+  <div class="report-card">
+    <h2>📈 Improvement Suggestions</h2>
+    <ul id="suggestions"></ul>
+  </div>
+
+  <div class="report-card">
+    <h2>📝 Recommendation Reasoning</h2>
+    <p id="recReasoning"></p>
+  </div>
+
+</div>
+
+<script src="/static/js/report.js?v=1.0.1"></script>
+</body>
+</html>
