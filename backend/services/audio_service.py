@@ -13,12 +13,12 @@ Changes made:
 import os
 import numpy as np
 import librosa
-import whisper
+from groq import Groq
 
 from backend.core.config import settings
 
-# Load Whisper once at startup — not per request
-_whisper_model = whisper.load_model(settings.WHISPER_MODEL)
+# Initialize Groq client once
+_groq_client = Groq(api_key=settings.GROQ_API_KEY)
 
 # Filler words to detect
 FILLER_WORDS = [
@@ -32,36 +32,67 @@ FILLER_WORDS = [
 
 def transcribe_audio(file_path: str) -> str:
     """
-    Transcribes audio using Whisper.
+    Transcribes audio using Groq Cloud hosted Whisper API.
     Keeps natural speech fillers (umm, uh, like etc.) for hesitation analysis.
     """
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Audio file not found: {file_path}")
 
-    result = _whisper_model.transcribe(
-        file_path,
-        fp16=False,
-        language="en",
-        temperature=0.0,
-        condition_on_previous_text=False,
-        initial_prompt=(
-            "Transcribe exactly as spoken. Keep all fillers: "
-            "umm, uh, aaa, hmm, like, you know, basically, i mean. "
-            "Do not clean or correct speech."
-        ),
-    )
-    return result["text"].strip()
+    with open(file_path, "rb") as file:
+        translation = _groq_client.audio.transcriptions.create(
+            file=(os.path.basename(file_path), file.read()),
+            model="whisper-large-v3",
+            prompt=(
+                "Transcribe exactly as spoken. Keep all speech fillers: "
+                "umm, uh, aaa, hmm, like, you know, basically, i mean. "
+                "Do not clean or correct speech."
+            ),
+            response_format="json",
+            language="en",
+            temperature=0.0
+        )
+    return translation.text.strip()
 
 
 # ─── Audio Analysis ───────────────────────────────────────────────────────────
+
+def load_wav_fast(file_path: str, target_sr: int = 16000) -> tuple[np.ndarray, int]:
+    try:
+        import scipy.io.wavfile as wavfile
+        sr, data = wavfile.read(file_path)
+        # Convert to float32 mono
+        if data.dtype == np.int16:
+            data = data.astype(np.float32) / 32768.0
+        elif data.dtype == np.int32:
+            data = data.astype(np.float32) / 2147483648.0
+        elif data.dtype == np.uint8:
+            data = (data.astype(np.float32) - 128.0) / 128.0
+        
+        if len(data.shape) > 1:
+            data = np.mean(data, axis=1) # convert stereo to mono
+            
+        if sr != target_sr:
+            # Resample if scipy.signal is available, else use librosa
+            try:
+                from scipy.signal import resample
+                num_samples = int(len(data) * target_sr / sr)
+                data = resample(data, num_samples)
+            except Exception:
+                import librosa
+                data = librosa.resample(data, orig_sr=sr, target_sr=target_sr)
+        return data, target_sr
+    except Exception as e:
+        # Fall back to librosa
+        import librosa
+        return librosa.load(file_path, sr=target_sr)
 
 def analyze_audio(file_path: str, transcript: str = "") -> dict:
     """
     Full audio confidence analysis.
     Returns structured metrics used by the Confidence Analysis agent.
     """
-    y, sr = librosa.load(file_path, sr=16000)
-    duration = librosa.get_duration(y=y, sr=sr)
+    y, sr = load_wav_fast(file_path, target_sr=16000)
+    duration = len(y) / sr if sr > 0 else 0.0
 
     # Normalize amplitude
     y = y / max(1e-8, np.max(np.abs(y)))
@@ -122,17 +153,8 @@ def analyze_audio(file_path: str, transcript: str = "") -> dict:
     # Normalize filler rate per minute
     filler_rate_per_min = (filler_count / duration * 60) if duration > 0 else 0
 
-    # ── Pitch Variance (nervousness indicator) ────────────────────────────────
-    try:
-        f0, voiced_flag, _ = librosa.pyin(
-            y, fmin=librosa.note_to_hz("C2"), fmax=librosa.note_to_hz("C7")
-        )
-        voiced_f0 = f0[voiced_flag] if f0 is not None else np.array([])
-        pitch_variance = float(np.var(voiced_f0)) if len(voiced_f0) > 1 else 0.0
-        # Normalize: high variance = unstable pitch = nervous
-        pitch_variance_norm = min(1.0, pitch_variance / 5000.0)
-    except Exception:
-        pitch_variance_norm = 0.0
+    # ── Pitch Variance (unused, bypassed for performance) ────────────────────
+    pitch_variance_norm = 0.0
 
     # ── Energy Variance ───────────────────────────────────────────────────────
     energy_variance = float(np.var(rms))

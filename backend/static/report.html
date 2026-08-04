@@ -3,104 +3,265 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Interview Report — AI Interview Simulator</title>
-<link rel="stylesheet" href="/static/css/style.css?v=1.0.1"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<title>Interview Assessment Report — AI Interview Simulator</title>
+<link rel="stylesheet" href="/static/css/style.css?v=1.0.2"/>
+<style>
+  :root {
+    --card-bg: rgba(22, 25, 37, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.08);
+  }
+
+  .report-hero-new {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px 40px;
+    margin-bottom: 24px;
+    backdrop-filter: blur(10px);
+  }
+
+  .hero-left-new h1 {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .hero-right-scores {
+    display: flex;
+    gap: 16px;
+  }
+
+  .score-badge-card {
+    background: rgba(108, 99, 255, 0.06);
+    border: 1px solid rgba(108, 99, 255, 0.15);
+    border-radius: 12px;
+    padding: 16px 20px;
+    text-align: center;
+    min-width: 110px;
+    transition: all 0.3s ease;
+  }
+
+  .score-badge-card:hover {
+    transform: translateY(-2px);
+    background: rgba(108, 99, 255, 0.1);
+    box-shadow: 0 8px 24px rgba(108, 99, 255, 0.15);
+  }
+
+  .score-badge-val {
+    font-size: 36px;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1.1;
+  }
+
+  .score-badge-lbl {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+
+  .pills-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .pill-strong {
+    background: rgba(76, 175, 80, 0.08);
+    color: #4caf50;
+    border: 1px solid rgba(76, 175, 80, 0.2);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .weak-topic-card {
+    background: rgba(224, 92, 92, 0.03);
+    border: 1px solid rgba(224, 92, 92, 0.1);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .weak-topic-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .weak-concept-list {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .weak-concept-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(224, 92, 92, 0.05);
+    border-radius: 6px;
+    font-size: 13px;
+  }
+
+  .freq-badge {
+    background: var(--danger);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 12px;
+    min-width: 18px;
+    text-align: center;
+  }
+
+  .contra-card {
+    border-left: 4px solid var(--danger);
+    background: rgba(224, 92, 92, 0.03);
+    padding: 16px 20px;
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+    position: relative;
+  }
+
+  .contra-card.resolved {
+    border-left-color: var(--success);
+    background: rgba(76, 175, 80, 0.03);
+  }
+
+  .contra-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .contra-topic {
+    font-weight: 700;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .contra-status {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 12px;
+  }
+
+  .contra-status.resolved {
+    background: rgba(76, 175, 130, 0.2);
+    color: var(--success);
+    border: 1px solid var(--success);
+  }
+
+  .contra-status.unresolved {
+    background: rgba(224, 92, 92, 0.2);
+    color: var(--danger);
+    border: 1px solid var(--danger);
+  }
+
+  .contra-statement {
+    font-size: 13px;
+    margin-bottom: 8px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .contra-statement strong {
+    color: var(--text);
+  }
+</style>
 </head>
 <body>
 <header class="report-header">
   <span class="logo-small">🤖</span>
-  <span>Interview Report</span>
+  <span>Interview Report v1.5</span>
   <button class="btn btn-outline" onclick="window.location.href='/'">New Interview</button>
 </header>
 
 <div class="report-layout">
 
-  <!-- Top: Candidate + Recommendation -->
-  <div class="report-hero">
-    <div class="hero-left">
-      <h1 id="candidateName">Candidate Name</h1>
+  <!-- Hero Section with Scores -->
+  <div class="report-hero-new">
+    <div class="hero-left-new">
+      <h1 id="candidateName">Candidate Assessment</h1>
       <p id="targetRole" class="target-role"></p>
       <p id="totalQuestions" class="meta-info"></p>
     </div>
-    <div class="hero-right">
-      <div class="recommendation-badge" id="recBadge">—</div>
-      <div class="overall-score" id="overallScore">—</div>
-      <div class="score-label">Overall Score</div>
+    <div class="hero-right-scores">
+      <div class="score-badge-card">
+        <div class="score-badge-val" id="techScore">—</div>
+        <div class="score-badge-lbl">Technical</div>
+      </div>
+      <div class="score-badge-card">
+        <div class="score-badge-val" id="commScore">—</div>
+        <div class="score-badge-lbl">Communication</div>
+      </div>
+      <div class="score-badge-card">
+        <div class="score-badge-val" id="gramScore">—</div>
+        <div class="score-badge-lbl">Grammar</div>
+      </div>
     </div>
   </div>
 
-  <!-- Summary -->
+  <!-- Strong Areas -->
   <div class="report-card">
-    <h2>📋 Summary</h2>
-    <p id="summary"></p>
-  </div>
-
-  <!-- Charts row -->
-  <div class="charts-row">
-    <div class="chart-card">
-      <h3>Topic Performance</h3>
-      <canvas id="topicChart"></canvas>
-    </div>
-    <div class="chart-card">
-      <h3>Score Breakdown</h3>
-      <canvas id="radarChart"></canvas>
-    </div>
-    <div class="chart-card">
-      <h3>Confidence Timeline</h3>
-      <canvas id="confidenceChart"></canvas>
+    <h2>💪 Strong Areas</h2>
+    <div class="pills-container" id="strongAreasList">
+      <p style="color: var(--text-dim);">No strong areas recorded.</p>
     </div>
   </div>
 
-  <!-- Details row -->
-  <div class="details-row">
-
-    <div class="report-card">
-      <h2>✅ Technical Strengths</h2>
-      <ul id="strengths"></ul>
+  <!-- Weak Areas grouped by Topic -->
+  <div class="report-card">
+    <h2>⚠️ Weak Areas (Missed Concepts)</h2>
+    <div id="weakAreasContainer">
+      <p style="color: var(--text-dim);">No weak areas detected.</p>
     </div>
+  </div>
 
-    <div class="report-card">
-      <h2>⚠️ Areas to Improve</h2>
-      <ul id="weaknesses"></ul>
+  <!-- Contradictions Detected -->
+  <div class="report-card">
+    <h2>🔄 Statement Contradictions</h2>
+    <div id="contradictionsContainer">
+      <p style="color: var(--text-dim);">No contradictions detected.</p>
     </div>
-
   </div>
 
+  <!-- Project Deep-Dive Feedback -->
+  <div class="report-card" id="projectFeedbackCard" style="display:none">
+    <h2>📁 Project Deep-Dive Feedback</h2>
+    <p id="projectFeedback" style="white-space: pre-wrap; line-height: 1.8; color: var(--text-dim);"></p>
+  </div>
+
+  <!-- Overall Summary -->
   <div class="report-card">
-    <h2>🗣️ Communication Assessment</h2>
-    <p id="communicationAssessment"></p>
-  </div>
-
-  <div class="report-card">
-    <h2>🎙️ Confidence & Delivery</h2>
-    <div class="confidence-grid" id="confidenceGrid"></div>
-    <p id="confidenceAssessment"></p>
-  </div>
-
-  <div class="report-card">
-    <h2>🧠 Behavioral Insights</h2>
-    <p id="behavioralInsights"></p>
-  </div>
-
-  <!-- Contradictions -->
-  <div class="report-card" id="contradictionsCard" style="display:none">
-    <h2>🔄 Contradictions Detected</h2>
-    <div id="contradictionsList"></div>
-  </div>
-
-  <div class="report-card">
-    <h2>📈 Improvement Suggestions</h2>
-    <ul id="suggestions"></ul>
-  </div>
-
-  <div class="report-card">
-    <h2>📝 Recommendation Reasoning</h2>
-    <p id="recReasoning"></p>
+    <h2>🗣️ Overall Summary</h2>
+    <p id="behaviorSummary" style="white-space: pre-wrap; line-height: 1.8; color: var(--text-dim);"></p>
   </div>
 
 </div>
 
-<script src="/static/js/report.js?v=1.0.1"></script>
+<script src="/static/js/report.js?v=1.0.2"></script>
 </body>
 </html>

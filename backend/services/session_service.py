@@ -1,52 +1,50 @@
 # backend/services/session_service.py
 """
-Manages interview sessions:
-- create new session
-- save state snapshot to DB
-- load state from DB
-- mark session complete
+Session management: create, save, load, and query interview sessions.
 """
 from __future__ import annotations
-import uuid, json, time
+import uuid
 from sqlalchemy.orm import Session
 
-from backend.db.models import InterviewSession, AnswerRecord as DBAnswerRecord
+from backend.db.models import InterviewSession
 from backend.core.state import InterviewState
 
 
-def create_session(db: Session) -> str:
+def create_session(db: Session, interview_type: str = "Backend") -> str:
     session_id = str(uuid.uuid4())
-    row = InterviewSession(id=session_id)
+    row = InterviewSession(id=session_id, interview_type=interview_type)
     db.add(row)
     db.commit()
     return session_id
 
 
-def build_initial_state(session_id: str, resume_text: str = "", resume_path: str = "") -> InterviewState:
+def build_initial_state(
+    session_id: str,
+    resume_path: str = "",
+    interview_type: str = "Backend",
+) -> InterviewState:
     return InterviewState(
         session_id=session_id,
         phase="resume_analysis",
-        candidate_profile=None,
-        resume_raw_text=resume_text,
+        interview_type=interview_type,
+        candidate=None,
         resume_path=resume_path,
-        conversation_history=[],
+        history=[],
         current_question=None,
-        current_question_id=None,
-        current_question_explanation=None,
         current_topic=None,
         raw_answer="",
-        topic_queue=[],
-        topic_statuses={},
-        current_difficulty=2,
-        follow_up_depth=0,
+        topics=[],
+        topic_questions={},
+        difficulty=2,
+        follow_ups=0,
         next_action="idle",
-        answer_records=[],
-        latest_satisfaction=None,
-        contradictions_detected=[],
-        audio_path=None,
-        latest_confidence=None,
+        answers=[],
+        latest_eval=None,
+        contradiction_found=False,
+        contradictions=[],
         confidence_timeline=[],
-        memory_collection_id=session_id,
+        selected_project=None,
+        project_dive_index=0,
         final_report=None,
     )
 
@@ -57,14 +55,13 @@ def save_state(db: Session, session_id: str, state: InterviewState):
         return
     row.state_snapshot = dict(state)
     row.phase = state.get("phase", "unknown")
-    profile = state.get("candidate_profile") or {}
-    row.candidate_name  = profile.get("name")
+    row.interview_type = state.get("interview_type", "Backend")
+    profile = state.get("candidate") or {}
+    row.candidate_name = profile.get("name")
     row.candidate_email = profile.get("email")
-    row.target_role     = profile.get("target_role")
+    row.target_role = profile.get("target_role")
     if state.get("final_report"):
         row.final_report = state["final_report"]
-        row.hiring_recommendation = state["final_report"].get("hiring_recommendation")
-        row.overall_score = state["final_report"].get("overall_score")
         row.is_complete = True
         import datetime
         row.completed_at = datetime.datetime.utcnow()

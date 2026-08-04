@@ -1,82 +1,70 @@
-# backend/agents/resume_analysis.py
-from __future__ import annotations
-import re, json
 import fitz
-
-from langchain_core.messages import SystemMessage, HumanMessage
-from backend.core.state import InterviewState
 from backend.core.llm import get_fast_llm
-
-_llm = get_fast_llm(temperature=0.1)
-
-SYSTEM_PROMPT = """
-You are an expert technical recruiter parsing a resume.
-Return ONLY a valid JSON object. No explanation, no markdown, no code fences.
-Use this exact structure:
-{
-  "name": "string",
-  "email": "string",
-  "skills": ["skill1"],
-  "technologies": ["tech1"],
-  "projects": [{"name": "...", "description": "...", "tech_stack": ["..."], "role": "..."}],
-  "experience": [{"company": "...", "role": "...", "duration": "...", "achievements": ["..."]}],
-  "education": [{"institution": "...", "degree": "...", "year": "..."}],
-  "coding_profiles": ["url1"],
-  "strongest_subjects": ["subject1"],
-  "target_role": "string",
-  "topic_queue": ["topic1", "topic2", "topic3", "topic4"],
-  "planning_rationale": "brief explanation"
-}
-Rules for topic_queue:
-- Pick 4-5 topics from the candidate's actual skills and technologies
-- Always end with: Communication & Problem Solving
-- Order strongest areas first
-- Topic names should be concise: Python, Machine Learning, SQL etc.
-"""
-
-def _parse(text: str) -> dict:
-    text = re.sub(r"```(?:json)?", "", text).strip().rstrip("`").strip()
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        match = re.search(r'\{.*\}', text, re.DOTALL)
-        if match:
-            return json.loads(match.group())
-        raise
+from backend.core.utils import parse_json
 
 def _extract_pdf_text(pdf_path: str) -> str:
-    doc = fitz.open(pdf_path)
-    return "\n".join(page.get_text() for page in doc)
+    try:
+        doc = fitz.open(pdf_path)
+        text = ""
+        for page in doc:
+            text += page.get_text()
+        return text
+    except Exception as e:
+        print(f"Error reading PDF: {e}")
+        return ""
 
-def resume_analysis_agent(state: InterviewState) -> dict:
-    resume_text = state.get("resume_raw_text", "")
-    if not resume_text and state.get("resume_path"):
-        resume_text = _extract_pdf_text(state["resume_path"])
-    if not resume_text:
-        raise ValueError("No resume text or PDF path in state.")
+SYSTEM_PROMPT = """You are an expert technical recruiter analyzing a candidate's resume.
+Extract the candidate's profile and plan the technical interview topics.
+Return JSON ONLY with this exact structure:
+{
+  "candidate": {
+    "name": "string",
+    "email": "string",
+    "skills": ["merged list of skills and technologies"],
+    "projects": [{"name": "string", "description": "string", "tech_stack": ["string"]}],
+    "experience": [{"company": "string", "role": "string", "duration": "string", "description": "string"}],
+    "education": [{"degree": "string", "institution": "string", "year": "string"}],
+    "target_role": "string"
+  },
+  "topics": ["topic1", "topic2", "topic3", "topic4"],
+  "planning_rationale": "string explaining why these topics were chosen"
+}"""
 
-    messages = [
-        SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(content=f"Resume text:\n\n{resume_text[:3000]}"),
-    ]
-    response = _llm.invoke(messages)
-    parsed = _parse(response.content)
+def analyze_resume(state: dict) -> dict:
+    resume_path = state.get("resume_path")
+    if not resume_path:
+        return {}
 
-    topic_queue = parsed.pop("topic_queue", [])
-    planning_rationale = parsed.pop("planning_rationale", "")
-    profile = parsed
+    resume_text = _extract_pdf_text(resume_path)
+    
+    llm = get_fast_llm()
+    response = llm.invoke([
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": f"Resume Text:\n{resume_text}"}
+    ])
+    
+    parsed_data = parse_json(response.content)
+    
+    candidate = parsed_data.get("candidate", {})
+    topics = parsed_data.get("topics", [])
+    
+    projects = candidate.get("projects", [])
+    selected_project = projects[0]["name"] if projects else None
 
     return {
-        "candidate_profile": profile,
-        "resume_raw_text": "",  # Clear the raw text to save state token usage
-        "phase": "intro",
-        "topic_queue": topic_queue,
-        "topic_statuses": {},
-        "answer_records": [],
-        "conversation_history": [],
-        "contradictions_detected": [],
+        "candidate": candidate,
+        "topics": topics,
+        "topic_questions": {},
+        "answers": [],
+        "history": [],
         "confidence_timeline": [],
-        "follow_up_depth": 0,
-        "current_difficulty": 2,
+        "follow_ups": 0,
+        "difficulty": 2,
         "next_action": "idle",
+        "phase": "intro",
+        "contradiction_found": False,
+        "contradictions": [],
+        "project_dive_index": 0,
+        "resume_path": None,
+        "selected_project": selected_project
     }

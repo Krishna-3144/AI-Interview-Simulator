@@ -11,6 +11,7 @@ let mediaRecorder  = null;
 let audioChunks    = [];
 let recordedBlob   = null;
 let isRecording    = false;
+let activeAudio    = null;
 
 // ── Init ───────────────────────────────────────────────────────────────────
 document.getElementById('candidateName').textContent = candidate.name || '';
@@ -59,12 +60,65 @@ function displayQuestion(question, topic, difficulty, explanation, isFollowUp) {
   recordedBlob = null;
   document.getElementById('transcriptPreview').classList.add('hidden');
   document.getElementById('submitAudioBtn').classList.add('hidden');
+
+  // Trigger audio playback
+  const playBtn = document.getElementById('playAudioBtn');
+  if (playBtn) {
+    playBtn.style.display = 'inline-flex';
+    playBtn.textContent = '🔊 Listen';
+    setTimeout(() => {
+      playQuestionAudio();
+    }, 400);
+  }
+}
+
+function playQuestionAudio() {
+  if (activeAudio) {
+    try {
+      activeAudio.pause();
+    } catch (e) {}
+  }
+  
+  const playBtn = document.getElementById('playAudioBtn');
+  if (!playBtn) return;
+  
+  playBtn.textContent = '⏳ Loading...';
+  playBtn.disabled = true;
+
+  activeAudio = new Audio(`/api/sessions/${sessionId}/question_audio?t=${Date.now()}`);
+  
+  activeAudio.onplay = () => {
+    playBtn.textContent = '🔊 Playing...';
+    playBtn.disabled = false;
+  };
+  
+  activeAudio.onended = () => {
+    playBtn.textContent = '🔊 Listen';
+  };
+  
+  activeAudio.onerror = () => {
+    playBtn.textContent = '❌ Error';
+    playBtn.disabled = false;
+    setTimeout(() => {
+      playBtn.textContent = '🔊 Listen';
+    }, 3000);
+  };
+  
+  activeAudio.play().catch(err => {
+    console.log("Autoplay was blocked or audio failed to play:", err);
+    playBtn.textContent = '🔊 Listen';
+    playBtn.disabled = false;
+  });
 }
 
 // ── Text submission ────────────────────────────────────────────────────────
 async function submitText() {
   const answer = document.getElementById('answerText').value.trim();
   if (!answer) return;
+
+  if (activeAudio) {
+    try { activeAudio.pause(); } catch(e){}
+  }
 
   addToHistory('candidate', answer);
   showThinking(true);
@@ -136,6 +190,10 @@ function stopRecording() {
 async function submitAudio() {
   if (!recordedBlob) return;
 
+  if (activeAudio) {
+    try { activeAudio.pause(); } catch(e){}
+  }
+
   showThinking(true);
   lockInput(true);
 
@@ -179,49 +237,80 @@ function handleResponse(data) {
   }
 
   // Display next question
-  const isFollowUp = data.next_action === 'ask_follow_up' || data.follow_up_depth > 0;
+  const isFollowUp = data.next_action === 'ask_follow_up' || data.next_action === 'clarify_contradiction';
   displayQuestion(
     data.question,
     data.topic,
     data.difficulty,
-    data.explanation,
+    null,
     isFollowUp
   );
   addToHistory('interviewer', data.question);
 }
 
 // ── Display scores ─────────────────────────────────────────────────────────
-function displayScores(scores) {
-  const dims = [
-    { key: 'technical_accuracy', label: 'Technical Accuracy' },
-    { key: 'depth',              label: 'Depth' },
-    { key: 'communication',      label: 'Communication' },
-    { key: 'confidence',         label: 'Confidence' },
-    { key: 'consistency',        label: 'Consistency' },
-  ];
+function displayScores(evaluation) {
+  if (!evaluation) return;
 
-  let html = '';
-  dims.forEach(d => {
-    const val  = scores[d.key] || 0;
-    const pct  = Math.round(val * 100);
-    const cls  = val >= 0.7 ? 'high' : val >= 0.45 ? 'medium' : 'low';
-    html += `
-      <div class="score-row">
-        <div class="score-row-header">
-          <span>${d.label}</span>
-          <span>${pct}%</span>
-        </div>
-        <div class="score-bar-bg">
-          <div class="score-bar-fill ${cls}" style="width:${pct}%"></div>
-        </div>
-      </div>`;
-  });
+  const scoreVal = evaluation.score !== undefined ? evaluation.score : 0;
+  const summary = evaluation.summary || "";
+  const strengths = evaluation.strengths || [];
+  const missing = evaluation.missing_topics || [];
 
-  if (scores.reasoning) {
-    html += `<div class="score-reasoning">💬 ${scores.reasoning}</div>`;
+  const pct = Math.round(scoreVal * 10);
+  const cls = scoreVal >= 7.0 ? 'high' : scoreVal >= 4.5 ? 'medium' : 'low';
+  
+  let html = `
+    <div class="score-row">
+      <div class="score-row-header">
+        <span>Technical Score</span>
+        <span>${scoreVal.toFixed(1)}/10</span>
+      </div>
+      <div class="score-bar-bg">
+        <div class="score-bar-fill ${cls}" style="width:${pct}%"></div>
+      </div>
+    </div>
+  `;
+  
+  if (summary) {
+    html += `<div class="score-reasoning">💬 ${summary}</div>`;
   }
-
+  
+  if (strengths && strengths.length > 0) {
+    html += `
+      <div style="margin-top: 16px;">
+        <strong style="color: var(--success); font-size: 13px; display: block; margin-bottom: 4px;">💪 Strengths:</strong>
+        <ul style="margin-left: 16px; margin-top: 0; font-size: 13px; color: var(--text-dim); display: flex; flex-direction: column; gap: 4px; padding-left: 16px; list-style-type: disc;">
+          ${strengths.map(s => `<li>${escapeHTML(s)}</li>`).join('')}
+        </ul>
+      </div>
+    `;
+  }
+  
+  if (missing && missing.length > 0) {
+    html += `
+      <div style="margin-top: 16px;">
+        <strong style="color: var(--warning); font-size: 13px; display: block; margin-bottom: 4px;">⚠️ Missing Topics:</strong>
+        <ul style="margin-left: 16px; margin-top: 0; font-size: 13px; color: var(--text-dim); display: flex; flex-direction: column; gap: 4px; padding-left: 16px; list-style-type: disc;">
+          ${missing.map(m => `<li>${escapeHTML(m)}</li>`).join('')}
+        </ul>
+      </div>
+    `;
+  }
+  
   document.getElementById('scoresDisplay').innerHTML = html;
+}
+
+function escapeHTML(str) {
+  return str.replace(/[&<>'"]/g, 
+    tag => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag] || tag)
+  );
 }
 
 // ── Display confidence ─────────────────────────────────────────────────────
@@ -275,6 +364,9 @@ document.getElementById('answerText').addEventListener('keydown', e => {
 // ── Control and Skip Actions ────────────────────────────────────────────────
 async function skipFollowup() {
   if (!confirm("Are you sure you want to skip follow-ups and move to the next question?")) return;
+  if (activeAudio) {
+    try { activeAudio.pause(); } catch(e){}
+  }
   showThinking(true);
   lockInput(true);
   try {
@@ -291,6 +383,9 @@ async function skipFollowup() {
 
 async function skipTopic() {
   if (!confirm("Are you sure you want to skip the current topic and advance to the next topic?")) return;
+  if (activeAudio) {
+    try { activeAudio.pause(); } catch(e){}
+  }
   showThinking(true);
   lockInput(true);
   try {
@@ -307,6 +402,9 @@ async function skipTopic() {
 
 async function endInterview() {
   if (!confirm("Are you sure you want to end the interview now and see your performance?")) return;
+  if (activeAudio) {
+    try { activeAudio.pause(); } catch(e){}
+  }
   showThinking(true);
   lockInput(true);
   try {
@@ -328,18 +426,7 @@ const FILLER_WORDS = [
   "kind of", "right", "okay so", "so yeah", "aaa", "err"
 ];
 
-function escapeHTML(str) {
-  if (!str) return "";
-  return str.replace(/[&<>'"]/g, 
-    tag => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      "'": '&#39;',
-      '"': '&quot;'
-    }[tag] || tag)
-  );
-}
+// escapeHTML defined above
 
 function highlightFillerWords(text) {
   if (!text) return "";
@@ -377,7 +464,7 @@ function closeAnalysisModal() {
 
 function renderDetailedAnalysis(data) {
   const detailsDiv = document.getElementById('analysisDetails');
-  const records = data.answer_records || [];
+  const records = data.answers || [];
 
   if (records.length === 0) {
     detailsDiv.innerHTML = '<p class="empty-msg">No answers evaluated yet. Try answering a question first.</p>';
@@ -386,23 +473,12 @@ function renderDetailedAnalysis(data) {
 
   let html = '';
   records.forEach((r, idx) => {
-    const sat = r.satisfaction || {};
-    const metrics = r.confidence_metrics || {};
+    const evalData = r.evaluation || {};
     
-    const highlightedAnswer = highlightFillerWords(r.answer_text);
-    
-    let pausesHtml = '';
-    if (metrics.long_pause_timestamps && metrics.long_pause_timestamps.length > 0) {
-      pausesHtml = `
-        <div style="margin-top: 8px; font-size: 13px;">
-          <strong>Awkward Pauses Timeline:</strong>
-          ${metrics.long_pause_timestamps.map(p => `<span class="pause-tag" title="Silence duration: ${p[2]}s">⏱️ ${p[2]}s pause at ${Math.round(p[0])}s</span>`).join('')}
-        </div>
-      `;
-    }
+    const highlightedAnswer = highlightFillerWords(r.answer);
 
     let gapsHtml = '';
-    const gaps = sat.technical_gaps || [];
+    const gaps = evalData.missing_topics || [];
     if (gaps.length > 0) {
       gapsHtml = `
         <div class="analysis-gaps-title">⚠️ Technical Gaps:</div>
@@ -415,17 +491,13 @@ function renderDetailedAnalysis(data) {
 
     html += `
       <div class="analysis-turn">
-        <div class="analysis-q">Q${idx + 1} (${r.topic}): ${escapeHTML(r.question_text)}</div>
+        <div class="analysis-q">Q${idx + 1} (${r.topic}): ${escapeHTML(r.question)}</div>
         <div class="analysis-a">${highlightedAnswer}</div>
         
         <div class="analysis-metrics-row">
-          <div class="analysis-metric-badge">🎯 Accuracy: <strong>${Math.round(sat.technical_accuracy * 100)}%</strong></div>
-          <div class="analysis-metric-badge">📚 Depth: <strong>${Math.round(sat.depth * 100)}%</strong></div>
-          <div class="analysis-metric-badge">🗣️ Comm: <strong>${Math.round(sat.communication * 100)}%</strong></div>
-          <div class="analysis-metric-badge">🎙️ Confidence: <strong>${Math.round(sat.confidence * 100)}%</strong></div>
+          <div class="analysis-metric-badge">🎯 Score: <strong>${evalData.score !== undefined ? evalData.score.toFixed(1) : '0.0'}/10</strong></div>
         </div>
 
-        ${pausesHtml}
         ${gapsHtml}
       </div>
     `;

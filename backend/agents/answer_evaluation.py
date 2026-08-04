@@ -1,141 +1,130 @@
-# backend/agents/answer_evaluation.py
-from __future__ import annotations
-import re, json, time
-from typing import Optional
-
-from langchain_core.messages import SystemMessage, HumanMessage
-from backend.core.state import InterviewState, SatisfactionScore, AnswerRecord
+import time
+from typing import Dict, Any
+from backend.core.utils import parse_json
 from backend.core.llm import get_main_llm
-from backend.services import memory_service
+from backend.core.state import InterviewState, EvaluationResult, AnswerRecord, Contradiction
 
-_llm = get_main_llm(temperature=0.1)
+CONTRADICTION_PROMPT = """
+You are a logical consistency checker. Compare the candidate's CURRENT answer against their PREVIOUS answers.
 
-EVALUATION_PROMPT = """
-You are an expert technical interviewer evaluating a candidate's answer.
-Also check if the answer contradicts any provided previous answers in `previous_answers_context`. Only flag genuine logical contradictions, not just different phrasings.
+Flag a contradiction ONLY if:
+- The candidate makes two INCOMPATIBLE statements about the SAME specific thing (same project, same tool, same experience)
+- Example: "I used PostgreSQL in my chat app" earlier vs "I used MySQL in my chat app" now -> CONTRADICTION
+- Example: "I have 2 years of Python experience" earlier vs "I've never used Python" now -> CONTRADICTION
 
-Return ONLY a valid JSON object. No explanation, no markdown, no code fences.
-Use this exact structure:
-{
-  "technical_accuracy": 0.0,
-  "depth": 0.0,
-  "communication": 0.0,
-  "confidence": 0.0,
-  "consistency": 0.0,
-  "overall": 0.0,
-  "reasoning": "specific explanation referencing actual content",
-  "technical_gaps": ["missing concept X", "incorrect assumption Y"],
-  "contradiction": {
-    "contradiction_found": false,
-    "earlier_statement": "the specific earlier statement contradicted, if found",
-    "current_statement": "the specific current statement contradicting, if found",
-    "explanation": "why they contradict, if found"
-  }
-}
-Score each 0.0 to 1.0. Overall = technical*0.35 + depth*0.25 + communication*0.2 + confidence*0.1 + consistency*0.1
-Be specific in reasoning — reference actual content of the answer.
+Do NOT flag as contradiction:
+- Different details about DIFFERENT projects (e.g., "used 10 agents in Project A" vs "used 1 agent in Project B")
+- Elaborating or expanding on earlier points
+- Using different but compatible terminology
+- Giving different numbers for different contexts
+- Opinions or preferences that naturally evolve during conversation
+
+Return ONLY a valid JSON object:
+{"found": false, "earlier": "", "current": ""}
+
+If found is true, fill earlier and current with the specific contradicting statements.
 """
 
-def _parse(text: str) -> dict:
-    text = re.sub(r"```(?:json)?", "", text).strip().rstrip("`").strip()
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        match = re.search(r'\{.*\}', text, re.DOTALL)
-        if match:
-            return json.loads(match.group())
-        raise
+TECHNICAL_EVALUATION_PROMPT = """
+You are an expert technical interviewer evaluating a candidate's answer.
 
-def answer_evaluation_agent(state: InterviewState) -> dict:
-    answer = state.get("raw_answer", "")
-    if not answer:
+Score the answer out of 10.0 based on:
+- Technical accuracy and correctness
+- Depth of understanding (examples, edge cases, tradeoffs)
+- Clarity of explanation
+
+Return ONLY a valid JSON object:
+{"score": 8.4, "summary": "brief evaluation", "strengths": ["concept A"], "missing_topics": ["concept X"]}
+"""
+
+def evaluate_answer(state: InterviewState) -> Dict[str, Any]:
+    phase = state.get("phase", "intro")
+    raw_answer = state.get("raw_answer", "")
+    current_question = state.get("current_question", "")
+    current_topic = state.get("current_topic", "")
+    difficulty = state.get("difficulty", 1)
+    answers = state.get("answers", [])
+    contradictions = state.get("contradictions", [])
+    history = state.get("history", [])
+
+    if not raw_answer:
         return {}
 
-    question = state.get("current_question", "")
-    question_id = state.get("current_question_id", "")
-    topic = state.get("current_topic", "General")
-    difficulty = state.get("current_difficulty", 2)
-    session_id = state.get("session_id", "")
-    confidence_metrics = state.get("latest_confidence")
-    history = list(state.get("conversation_history", []))
-    follow_up_depth = state.get("follow_up_depth", 0)
+    llm = get_main_llm(temperature=0.1)
+    eval_result: EvaluationResult
+    selected_project = state.get("selected_project")
+    contradiction_found = state.get("contradiction_found", False)
+    
+    is_q3 = len(answers) == 2
 
-    audio_confidence = confidence_metrics.get("confidence_score") if confidence_metrics else None
+    if phase == "intro":
+        eval_result = {
+            "score": 10.0,
+            "summary": "Intro response",
+            "strengths": [],
+            "missing_topics": []
+        }
+        if is_q3:
+            selected_project = raw_answer.strip()
+    else:
+        # 1. Grade the answer
+        eval_sys_prompt = TECHNICAL_EVALUATION_PROMPT
+        eval_user_prompt = f"Question: {current_question}\nCandidate Answer: {raw_answer}\nEvaluate."
+        eval_resp = llm.invoke([
+            {"role": "system", "content": eval_sys_prompt}, 
+            {"role": "user", "content": eval_user_prompt}
+        ])
+        parsed_eval = parse_json(eval_resp.content if hasattr(eval_resp, "content") else eval_resp)
+        eval_result = {
+            "score": float(parsed_eval.get("score", 5.0)),
+            "summary": parsed_eval.get("summary", ""),
+            "strengths": parsed_eval.get("strengths", []),
+            "missing_topics": parsed_eval.get("missing_topics", [])
+        }
 
-    # Retrieve similar answers to pass as context for contradiction checking
-    similar = memory_service.search_similar(session_id, answer, n_results=3)
-    close = [s for s in similar if s["distance"] < 0.35]
-    prior_text = ""
-    if close:
-        prior_text = "\n---\n".join(
-            f"Topic: {s['metadata'].get('topic','?')}\n{s['document']}" for s in close
-        )
+        # 2. Check for contradiction if there are previous answers
+        if answers:
+            prev_answers_text = "\n".join([f"Q: {a['question']}\nA: {a['answer']}" for a in answers])
+            contra_user_prompt = f"Previous Q&A:\n{prev_answers_text}\n\nCurrent Q: {current_question}\nCurrent A: {raw_answer}"
+            contra_resp = llm.invoke([
+                {"role": "system", "content": CONTRADICTION_PROMPT}, 
+                {"role": "user", "content": contra_user_prompt}
+            ])
+            parsed_contra = parse_json(contra_resp.content if hasattr(contra_resp, "content") else contra_resp)
+            
+            if parsed_contra.get("found"):
+                contradiction_found = True
+                contradictions.append({
+                    "earlier": parsed_contra.get("earlier", ""),
+                    "current": parsed_contra.get("current", ""),
+                    "topic": current_topic or ""
+                })
 
-    eval_payload = {
-        "question": question,
-        "answer": answer,
-        "topic": topic,
+    # 4. Build AnswerRecord
+    record: AnswerRecord = {
+        "question": current_question,
+        "answer": raw_answer,
+        "topic": current_topic or "",
         "difficulty": difficulty,
-        "audio_confidence_score": audio_confidence,
+        "evaluation": eval_result,
+        "timestamp": time.time()
     }
-    if prior_text:
-        eval_payload["previous_answers_context"] = prior_text[:2000]
+    answers.append(record)
 
-    messages = [
-        SystemMessage(content=EVALUATION_PROMPT),
-        HumanMessage(content=json.dumps(eval_payload, separators=(',', ':'))),
-    ]
-    scores = _parse(_llm.invoke(messages).content)
+    # 5. Append to history
+    history.append({
+        "role": "candidate",
+        "content": raw_answer
+    })
 
-    conf = scores.get("confidence", 0.5)
-    if audio_confidence is not None:
-        conf = round(conf * 0.4 + audio_confidence * 0.6, 3)
-
-    overall = round(
-        scores.get("technical_accuracy", 0) * 0.35
-        + scores.get("depth", 0) * 0.25
-        + scores.get("communication", 0) * 0.20
-        + conf * 0.10
-        + scores.get("consistency", 0) * 0.10,
-        3,
-    )
-
-    satisfaction = SatisfactionScore(
-        technical_accuracy=scores.get("technical_accuracy", 0),
-        depth=scores.get("depth", 0),
-        communication=scores.get("communication", 0),
-        confidence=conf,
-        consistency=scores.get("consistency", 0),
-        overall=overall,
-        reasoning=scores.get("reasoning", ""),
-        technical_gaps=scores.get("technical_gaps", []),
-    )
-
-    contradictions = list(state.get("contradictions_detected", []))
-    contradiction_res = scores.get("contradiction")
-    if contradiction_res and contradiction_res.get("contradiction_found"):
-        contradiction_res["question_id"] = question_id
-        contradictions.append(contradiction_res)
-
-    memory_service.store_answer(session_id, question_id, question, answer, topic)
-
-    history.append({"role": "candidate", "content": answer, "timestamp": time.time()})
-
-    record = AnswerRecord(
-        question_id=question_id,
-        question_text=question,
-        topic=topic,
-        difficulty=difficulty,
-        answer_text=answer,
-        satisfaction=satisfaction,
-        confidence_metrics=confidence_metrics,
-        follow_up_count=follow_up_depth,
-        timestamp=time.time(),
-    )
-
-    return {
-        "latest_satisfaction": satisfaction,
-        "answer_records": list(state.get("answer_records", [])) + [record],
-        "contradictions_detected": contradictions,
-        "conversation_history": history,
+    updates = {
+        "answers": answers,
+        "history": history,
+        "latest_eval": eval_result,
+        "contradictions": contradictions,
+        "contradiction_found": contradiction_found
     }
+    if phase == "intro" and is_q3:
+        updates["selected_project"] = selected_project
+
+    return updates

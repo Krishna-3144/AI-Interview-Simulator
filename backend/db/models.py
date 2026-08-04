@@ -1,8 +1,8 @@
 # backend/db/models.py
 from datetime import datetime
 from sqlalchemy import (
-    create_engine, Column, String, Float, Integer,
-    DateTime, Text, JSON, Boolean
+    create_engine, Column, String, Float,
+    DateTime, JSON, Boolean
 )
 from sqlalchemy.orm import declarative_base, sessionmaker
 from backend.core.config import settings
@@ -25,6 +25,7 @@ class InterviewSession(Base):
     candidate_email = Column(String, nullable=True)
     target_role     = Column(String, nullable=True)
     phase           = Column(String, default="resume_analysis")
+    interview_type  = Column(String, default="Backend")
     is_complete     = Column(Boolean, default=False)
 
     # Full state snapshot (JSON blob) — lets us resume sessions
@@ -34,32 +35,6 @@ class InterviewSession(Base):
     final_report    = Column(JSON, nullable=True)
     hiring_recommendation = Column(String, nullable=True)
     overall_score   = Column(Float, nullable=True)
-
-
-class AnswerRecord(Base):
-    __tablename__ = "answer_records"
-
-    id              = Column(String, primary_key=True)
-    session_id      = Column(String, index=True)
-    question_id     = Column(String)
-    question_text   = Column(Text)
-    topic           = Column(String)
-    difficulty      = Column(Integer)
-    answer_text     = Column(Text)
-    follow_up_count = Column(Integer, default=0)
-    timestamp       = Column(Float)
-
-    # Satisfaction scores
-    score_technical = Column(Float)
-    score_depth     = Column(Float)
-    score_communication = Column(Float)
-    score_confidence = Column(Float)
-    score_consistency = Column(Float)
-    score_overall   = Column(Float)
-    score_reasoning = Column(Text)
-
-    # Confidence metrics
-    confidence_metrics = Column(JSON, nullable=True)
 
 
 def init_db():

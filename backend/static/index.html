@@ -33,6 +33,17 @@
         <span id="fileName"></span>
       </div>
 
+      <div class="form-group" style="margin: 20px 0; text-align: left;">
+        <label for="interviewType" style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.9rem; color: #555;">Interview Focus</label>
+        <select id="interviewType" name="interview_type" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: #fff; font-size: 0.95rem; outline: none; cursor: pointer; color: #333;">
+          <option value="Backend">Backend Engineer</option>
+          <option value="SDE">Software Development Engineer (General SDE)</option>
+          <option value="ML">Machine Learning / AI Engineer</option>
+          <option value="Internship">Technical Intern</option>
+          <option value="HR">HR / Behavioral / Management</option>
+        </select>
+      </div>
+
       <button type="submit" class="btn btn-primary" id="startBtn" disabled>
         Start Interview
       </button>
@@ -95,6 +106,7 @@ form.addEventListener('submit', async e => {
 
   const fd = new FormData();
   fd.append('resume', file);
+  fd.append('interview_type', document.getElementById('interviewType').value);
 
   try {
     const res = await fetch('/api/sessions', { method: 'POST', body: fd });
