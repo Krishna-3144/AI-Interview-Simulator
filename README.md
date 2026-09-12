@@ -1,174 +1,113 @@
 # 🤖 AI Interview Simulator
 
-An advanced multi-agent AI interview system with adaptive follow-ups, voice analysis, and deep performance analytics.
+> An advanced, multi-agent AI interview system with adaptive follow-ups, real-time voice analysis, and deep performance analytics. 
+
+**[🔗 Try the Live Demo here!](https://ai-interview-simulator-three-roan.vercel.app/)**
 
 ---
 
-## 🚀 Setup (3 steps)
+## 💡 What is this?
 
-### Step 1 — Install dependencies
+This is a full-stack application that simulates a technical interview using AI. Instead of just asking a static list of questions, the system dynamically adapts to your answers. 
+
+Under the hood, we use **6 distinct LangGraph agents** running on a blazing-fast **FastAPI** backend (powered by the Groq API) to evaluate your resume, plan topics, generate questions, grade your answers across 5 dimensions, and even detect if you contradict yourself during the interview.
+
+The frontend is a lightweight, beautifully designed vanilla JS app hosted on Vercel.
+
+---
+
+## 🚀 Quick Setup (Local Development)
+
+Want to run this yourself? Here is how to get it going locally.
+
+### Step 1 — Clone & Install
+First, grab the code and install the backend dependencies. We've optimized the requirements so it runs lightning fast!
+
 ```bash
+git clone https://github.com/Krishna-3144/AI-Interview-Simulator.git
+cd AI-Interview-Simulator
 pip install -r requirements.txt
 ```
 
-### Step 2 — Configure environment
+### Step 2 — Configure Environment
+Copy the example environment file:
 ```bash
 cp .env.example .env
 ```
 Open `.env` and add your **Groq API key**:
-```
+```ini
 GROQ_API_KEY=your_groq_api_key_here
 ```
-Get a free key at: https://console.groq.com
+*(Get a free key at: https://console.groq.com)*
 
-### Step 3 — Run
+### Step 3 — Run the Backend
+Start the FastAPI server:
 ```bash
-python run.py
+uvicorn backend.api.main:app --host 127.0.0.1 --port 8000
 ```
-Open your browser at: **http://localhost:8000**
+
+### Step 4 — Run the Frontend
+In a new terminal window, serve the frontend folder:
+```bash
+cd frontend
+python -m http.server 3000
+```
+Open your browser to **http://localhost:3000** and start your interview!
 
 ---
 
-## 📁 Project Structure
+## 🧠 The Agent Architecture
 
-```
-interview_simulator/
-├── run.py                        # Entry point
-├── requirements.txt
-├── .env.example                  # Copy to .env and add your API key
-│
-└── backend/
-    ├── api/
-    │   └── main.py               # FastAPI routes + WebSocket
-    │
-    ├── agents/                   # 6 LangGraph agents
-    │   ├── resume_analysis.py    # Agent 1: parse PDF → candidate profile
-    │   ├── interview_planning.py # Agent 2: topic queue + difficulty
-    │   ├── question_generation.py# Agent 3: adaptive question generation
-    │   ├── answer_evaluation.py  # Agent 4: 5-dimension scoring
-    │   ├── followup_decision.py  # Agent 5: adaptive routing brain
-    │   └── report_generation.py  # Agent 6: final analytics
-    │
-    ├── core/
-    │   ├── state.py              # Shared InterviewState TypedDict
-    │   ├── graph.py              # LangGraph state machine
-    │   ├── llm.py                # Groq LLM client (swap model here)
-    │   └── config.py             # Settings from .env
-    │
-    ├── services/
-    │   ├── audio_service.py      # Whisper + librosa pipeline
-    │   ├── memory_service.py     # ChromaDB semantic memory
-    │   └── session_service.py    # Session CRUD + state persistence
-    │
-    ├── db/
-    │   └── models.py             # SQLAlchemy models + SQLite
-    │
-    └── static/                   # Frontend (served by FastAPI)
-        ├── index.html            # Resume upload page
-        ├── interview.html        # Live interview page
-        ├── report.html           # Final analytics dashboard
-        ├── css/style.css
-        └── js/
-            ├── interview.js
-            └── report.js
+The backend isn't just one big LLM call. It uses a graph of specialized agents:
+
+```mermaid
+graph TD
+    User([User uploads resume]) --> A1[Agent 1: Resume Analysis]
+    A1 --> A2[Agent 2: Interview Planning]
+    A2 --> A3[Agent 3: Question Generation]
+    A3 --> Answer([USER ANSWERS])
+    Answer --> A4[Agent 4: Answer Evaluation]
+    A4 --> A5[Agent 5: Follow-Up Decision]
+    
+    A5 -- "Probes deeper" --> A3
+    A5 -- "Advances topic" --> A2
+    A5 -- "Ends interview" --> A6[Agent 6: Report Generation]
 ```
 
 ---
 
-## 🧠 Agent Architecture
+## 🎙️ Voice Mode & Groq Cloud
 
-```
-User uploads resume
-        ↓
-[Agent 1] Resume Analysis      → extracts structured candidate profile
-        ↓
-[Agent 2] Interview Planning   → builds topic queue, sets difficulty
-        ↓
-[Agent 3] Question Generation  → generates personalized question
-        ↓
-     [USER ANSWERS]
-        ↓
-[Agent 4] Answer Evaluation    → scores 5 dimensions + stores in memory
-        ↓
-[Agent 5] Follow-Up Decision   → decides: probe deeper / advance / wrap up
-        ↓
-    ┌───────────────────────────────────────┐
-    │  next_action routing                  │
-    │  "ask_follow_up"  → Agent 3 (probe)   │
-    │  "advance_topic"  → Agent 2 → Agent 3 │
-    │  "deepen"         → Agent 3 (harder)  │
-    │  "project_deep"   → Agent 3 (project) │
-    │  "generate_report"→ Agent 6           │
-    └───────────────────────────────────────┘
-        ↓
-[Agent 6] Report Generation    → final analytics + hiring recommendation
-```
+Originally, this project used local PyTorch and Whisper models. To make it incredibly fast and deployable on free-tier hosting (like Render), we migrated all heavy ML operations to the **Groq API Cloud**. 
+
+- **Speech-to-Text**: We use Groq's `whisper-large-v3` endpoint for near-instant transcription.
+- **LLM Engine**: Core logic runs on Groq's high-speed inference engine, meaning the agents can talk to each other and generate responses in milliseconds.
 
 ---
 
-## 🎙️ Voice Mode
+## 📊 How You're Scored
 
-The system uses **Whisper** for transcription and **librosa** for audio analysis.
-
-Whisper model options (set in `.env`):
-- `base` — fast, good enough (default)
-- `small` — more accurate, slightly slower
-- `medium` — best accuracy, requires more RAM
-
-Audio features extracted:
-- Speech rate (words per second)
-- Long pause detection (pauses > 1 second)
-- Filler word count (umm, uh, like, you know...)
-- Pitch variance (nervousness signal)
-- Hesitation score (0-1)
-- Confidence score (0-1)
-
----
-
-## 🔄 Switching LLM
-
-To switch from Groq to another provider, edit `backend/core/llm.py`:
-
-```python
-# Current: Groq
-from langchain_groq import ChatGroq
-
-# Switch to OpenAI:
-from langchain_openai import ChatOpenAI
-def get_main_llm(): return ChatOpenAI(model="gpt-4o", ...)
-
-# Switch to Ollama (local):
-from langchain_ollama import ChatOllama
-def get_main_llm(): return ChatOllama(model="llama3.1:70b", ...)
-```
-
----
-
-## 📊 Satisfaction Scoring
-
-Each answer is scored across 5 dimensions:
+Every single answer you give is graded across 5 distinct dimensions:
 
 | Dimension | Weight | What it measures |
 |---|---|---|
-| Technical Accuracy | 35% | Correctness, concept understanding |
-| Depth | 25% | Examples, edge cases, tradeoffs |
-| Communication | 20% | Clarity, structure, coherence |
-| Confidence | 10% | Audio analysis + text inference |
-| Consistency | 10% | No contradictions with prior answers |
+| **Technical Accuracy** | 35% | Correctness, concept understanding |
+| **Depth** | 25% | Examples, edge cases, tradeoffs |
+| **Communication** | 20% | Clarity, structure, coherence |
+| **Confidence** | 10% | Audio analysis + text inference |
+| **Consistency** | 10% | Ensuring no contradictions with prior answers |
 
-If overall score < 0.65 (configurable) → follow-up question is generated.
-If overall score > 0.85 → difficulty increases.
+*If your score drops below 65% on a question, the AI will dynamically generate a follow-up question to probe your weaknesses!*
 
 ---
 
-## ⚙️ Configuration
+## 🛠️ Tech Stack
 
-All behaviour is configurable in `.env`:
+- **Frontend**: HTML5, Vanilla JavaScript, CSS Variables (Dark/Light Dual-Tone Theme)
+- **Backend**: Python, FastAPI, Uvicorn
+- **AI/Agents**: LangGraph, LangChain, Groq API
+- **Deployment**: Vercel (Frontend), Render (Backend)
 
-```
-SATISFACTION_THRESHOLD=0.65      # below this → follow-up
-MAX_FOLLOW_UPS_PER_QUESTION=3    # max probes per question
-MIN_QUESTIONS_PER_TOPIC=2        # min before advancing topic
-MAX_QUESTIONS_PER_TOPIC=5        # max before forcing advance
-WHISPER_MODEL=base               # whisper model size
-```
+---
+
+*Built with ❤️ for developers looking to ace their next interview.*
