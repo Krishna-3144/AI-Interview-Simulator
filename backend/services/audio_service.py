@@ -30,7 +30,7 @@ FILLER_WORDS = [
 
 # ─── Transcription ────────────────────────────────────────────────────────────
 
-def transcribe_audio(file_path: str) -> str:
+def transcribe_audio(file_path: str, context_prompt: str = "") -> str:
     """
     Transcribes audio using Groq Cloud hosted Whisper API.
     Keeps natural speech fillers (umm, uh, like etc.) for hesitation analysis.
@@ -38,15 +38,18 @@ def transcribe_audio(file_path: str) -> str:
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Audio file not found: {file_path}")
 
+    base_prompt = (
+        "Transcribe exactly as spoken. Keep all speech fillers: "
+        "umm, uh, aaa, hmm, like, you know, basically, i mean. "
+        "Do not clean or correct speech."
+    )
+    final_prompt = f"{context_prompt} {base_prompt}" if context_prompt else base_prompt
+
     with open(file_path, "rb") as file:
         translation = _groq_client.audio.transcriptions.create(
             file=(os.path.basename(file_path), file.read()),
             model="whisper-large-v3",
-            prompt=(
-                "Transcribe exactly as spoken. Keep all speech fillers: "
-                "umm, uh, aaa, hmm, like, you know, basically, i mean. "
-                "Do not clean or correct speech."
-            ),
+            prompt=final_prompt,
             response_format="json",
             language="en",
             temperature=0.0
@@ -196,11 +199,11 @@ def analyze_audio(file_path: str, transcript: str = "") -> dict:
     }
 
 
-def process_answer_audio(file_path: str) -> tuple[str, dict]:
+def process_answer_audio(file_path: str, context_prompt: str = "") -> tuple[str, dict]:
     """
     Convenience wrapper — transcribe then analyze.
     Returns (transcript, confidence_metrics).
     """
-    transcript = transcribe_audio(file_path)
+    transcript = transcribe_audio(file_path, context_prompt)
     metrics = analyze_audio(file_path, transcript)
     return transcript, metrics

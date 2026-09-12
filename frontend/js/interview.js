@@ -3,7 +3,7 @@
 const sessionId   = sessionStorage.getItem('session_id');
 const candidate   = JSON.parse(sessionStorage.getItem('candidate') || '{}');
 
-if (!sessionId) window.location.href = '/';
+if (!sessionId) window.location.href = 'index.html';
 
 // ── State ──────────────────────────────────────────────────────────────────
 let currentMode    = 'text';
@@ -21,10 +21,32 @@ const firstTopic       = sessionStorage.getItem('first_topic');
 const firstDifficulty  = parseInt(sessionStorage.getItem('first_difficulty') || '2');
 const firstExplanation = sessionStorage.getItem('first_explanation');
 
-if (firstQuestion) {
-  displayQuestion(firstQuestion, firstTopic, firstDifficulty, firstExplanation, false);
-  addToHistory('interviewer', firstQuestion);
+async function loadSessionState() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/sessions/${sessionId}`);
+    if (!res.ok) throw new Error("Failed to load session");
+    const data = await res.json();
+    
+    // If the backend has a current question, use it (handles page refreshes)
+    if (data.current_question) {
+      displayQuestion(data.current_question, data.current_topic, data.difficulty, null, false);
+      addToHistory('interviewer', data.current_question);
+    } 
+    // Fallback to sessionStorage if it's the very first load and backend hasn't saved it yet
+    else if (firstQuestion) {
+      displayQuestion(firstQuestion, firstTopic, firstDifficulty, firstExplanation, false);
+      addToHistory('interviewer', firstQuestion);
+    }
+  } catch(e) {
+    console.error("Error loading session:", e);
+    // Fallback
+    if (firstQuestion) {
+      displayQuestion(firstQuestion, firstTopic, firstDifficulty, firstExplanation, false);
+      addToHistory('interviewer', firstQuestion);
+    }
+  }
 }
+loadSessionState();
 
 // ── Mode toggle ────────────────────────────────────────────────────────────
 function setMode(mode) {
@@ -66,6 +88,13 @@ function displayQuestion(question, topic, difficulty, explanation, isFollowUp) {
   if (playBtn) {
     playBtn.style.display = 'inline-flex';
     playBtn.textContent = '🔊 Listen';
+    
+    // Stop any previously playing audio before starting a new question
+    if (activeAudio) {
+      try { activeAudio.pause(); } catch(e){}
+      activeAudio = null;
+    }
+    
     setTimeout(() => {
       playQuestionAudio();
     }, 400);
@@ -73,19 +102,30 @@ function displayQuestion(question, topic, difficulty, explanation, isFollowUp) {
 }
 
 function playQuestionAudio() {
-  if (activeAudio) {
-    try {
-      activeAudio.pause();
-    } catch (e) {}
-  }
-  
   const playBtn = document.getElementById('playAudioBtn');
   if (!playBtn) return;
+
+  // If audio is already loaded, toggle play/pause
+  if (activeAudio) {
+    try {
+      if (!activeAudio.paused) {
+        activeAudio.pause();
+        playBtn.textContent = '🔊 Listen';
+        return;
+      } else {
+        activeAudio.play();
+        playBtn.textContent = '🔊 Playing...';
+        return;
+      }
+    } catch (e) {
+      console.error("Audio toggle error:", e);
+    }
+  }
   
   playBtn.textContent = '⏳ Loading...';
   playBtn.disabled = true;
 
-  activeAudio = new Audio(`/api/sessions/${sessionId}/question_audio?t=${Date.now()}`);
+  activeAudio = new Audio(`${API_BASE_URL}/api/sessions/${sessionId}/question_audio?t=${Date.now()}`);
   
   activeAudio.onplay = () => {
     playBtn.textContent = '🔊 Playing...';
@@ -102,6 +142,7 @@ function playQuestionAudio() {
     setTimeout(() => {
       playBtn.textContent = '🔊 Listen';
     }, 3000);
+    activeAudio = null;
   };
   
   activeAudio.play().catch(err => {
@@ -128,11 +169,16 @@ async function submitText() {
   fd.append('answer', answer);
 
   try {
-    const res  = await fetch(`/api/sessions/${sessionId}/answer`, { method: 'POST', body: fd });
+    const res  = await fetch(`${API_BASE_URL}/api/sessions/${sessionId}/answer`, { method: 'POST', body: fd });
+    if (!res.ok) {
+      let errData = { detail: "Network error" };
+      try { errData = await res.json(); } catch(e) {}
+      throw new Error(errData.detail || 'Error submitting answer');
+    }
     const data = await res.json();
     handleResponse(data);
   } catch (err) {
-    showError('Network error. Please try again.');
+    showError(err.message);
   } finally {
     showThinking(false);
     lockInput(false);
@@ -157,16 +203,22 @@ async function startRecording() {
     mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
     mediaRecorder.onstop = () => {
       recordedBlob = new Blob(audioChunks, { type: 'audio/wav' });
-      document.getElementById('submitAudioBtn').classList.remove('hidden');
+      const submitBtn = document.getElementById('submitAudioBtn');
+      if (submitBtn) submitBtn.classList.remove('hidden');
       document.getElementById('transcriptPreview').classList.remove('hidden');
       document.getElementById('transcriptText').textContent = 'Processing transcript...';
+      
+      // Auto-submit after a tiny delay to ensure Blob is fully ready
+      setTimeout(() => {
+        submitAudio();
+      }, 150);
     };
 
     mediaRecorder.start();
     isRecording = true;
 
     const btn = document.getElementById('recordBtn');
-    btn.textContent = '⏹️ Stop Recording';
+    btn.textContent = '⏹️ Tap to stop';
     btn.classList.add('recording');
     document.getElementById('recordingIndicator').classList.remove('hidden');
   } catch (err) {
@@ -181,7 +233,7 @@ function stopRecording() {
     isRecording = false;
 
     const btn = document.getElementById('recordBtn');
-    btn.textContent = '🎙️ Start Recording';
+    btn.textContent = '🎙️ Tap to record';
     btn.classList.remove('recording');
     document.getElementById('recordingIndicator').classList.add('hidden');
   }
@@ -201,7 +253,12 @@ async function submitAudio() {
   fd.append('audio', recordedBlob, 'answer.wav');
 
   try {
-    const res  = await fetch(`/api/sessions/${sessionId}/audio`, { method: 'POST', body: fd });
+    const res  = await fetch(`${API_BASE_URL}/api/sessions/${sessionId}/audio`, { method: 'POST', body: fd });
+    if (!res.ok) {
+      let errData = { detail: "Network error" };
+      try { errData = await res.json(); } catch(e) {}
+      throw new Error(errData.detail || 'Error processing audio');
+    }
     const data = await res.json();
 
     if (data.transcript) {
@@ -211,7 +268,7 @@ async function submitAudio() {
     if (data.confidence) displayConfidence(data.confidence);
     handleResponse(data);
   } catch (err) {
-    showError('Error processing audio. Try text mode.');
+    showError(err.message);
   } finally {
     showThinking(false);
     lockInput(false);
@@ -222,19 +279,12 @@ async function submitAudio() {
 function handleResponse(data) {
   if (data.done) {
     // Interview complete — go to report
-    window.location.href = `/report?session=${sessionId}`;
+    window.location.href = `report.html?session=${sessionId}`;
     return;
   }
 
   // Show scores
   if (data.latest_scores) displayScores(data.latest_scores);
-
-  // Contradiction alert
-  const contAlert = document.getElementById('contradictionAlert');
-  if (data.contradictions && data.contradictions.length > 0) {
-    contAlert.classList.remove('hidden');
-    setTimeout(() => contAlert.classList.add('hidden'), 8000);
-  }
 
   // Display next question
   const isFollowUp = data.next_action === 'ask_follow_up' || data.next_action === 'clarify_contradiction';
@@ -370,7 +420,7 @@ async function skipFollowup() {
   showThinking(true);
   lockInput(true);
   try {
-    const res = await fetch(`/api/sessions/${sessionId}/skip_followup`, { method: 'POST' });
+    const res = await fetch(`${API_BASE_URL}/api/sessions/${sessionId}/skip_followup`, { method: 'POST' });
     const data = await res.json();
     handleResponse(data);
   } catch (err) {
@@ -389,7 +439,7 @@ async function skipTopic() {
   showThinking(true);
   lockInput(true);
   try {
-    const res = await fetch(`/api/sessions/${sessionId}/skip_topic`, { method: 'POST' });
+    const res = await fetch(`${API_BASE_URL}/api/sessions/${sessionId}/skip_topic`, { method: 'POST' });
     const data = await res.json();
     handleResponse(data);
   } catch (err) {
@@ -408,7 +458,7 @@ async function endInterview() {
   showThinking(true);
   lockInput(true);
   try {
-    const res = await fetch(`/api/sessions/${sessionId}/end_interview`, { method: 'POST' });
+    const res = await fetch(`${API_BASE_URL}/api/sessions/${sessionId}/end_interview`, { method: 'POST' });
     const data = await res.json();
     handleResponse(data);
   } catch (err) {
@@ -449,7 +499,7 @@ async function openAnalysisModal() {
   modal.classList.remove('hidden');
 
   try {
-    const res = await fetch(`/api/sessions/${sessionId}/analysis`);
+    const res = await fetch(`${API_BASE_URL}/api/sessions/${sessionId}/analysis`);
     if (!res.ok) throw new Error('Failed to load analysis');
     const data = await res.json();
     renderDetailedAnalysis(data);

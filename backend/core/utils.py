@@ -15,5 +15,9 @@ def parse_json(text: str) -> dict:
     except json.JSONDecodeError:
         match = re.search(r'\{.*\}', text, re.DOTALL)
         if match:
-            return json.loads(match.group())
-        raise
+            try:
+                return json.loads(match.group())
+            except json.JSONDecodeError:
+                pass
+        print(f"[ERROR] Failed to parse JSON from LLM: {text[:100]}...")
+        return {}

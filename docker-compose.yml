@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount the database to persist state across container restarts
+      - ./backend/db:/app/backend/db
+      # Mount the data directory for TTS audio and uploads
+      - ai_data:/root/ai_interview_simulator_data
+    env_file:
+      - .env
+    environment:
+      - APP_HOST=0.0.0.0
+      - APP_PORT=8000
+    restart: unless-stopped
+
+volumes:
+  ai_data:

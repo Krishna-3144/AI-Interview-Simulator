@@ -35,7 +35,7 @@ app = FastAPI(title="AI Interview Simulator", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -65,26 +65,6 @@ def _precache_tts_async(session_id: str, state: dict):
     threading.Thread(target=_precache_tts, args=(session_id, state), daemon=True).start()
 
 
-# ── Static files + HTML pages ────────────────────────────────────────────────
-
-app.mount("/static", StaticFiles(directory="backend/static"), name="static")
-
-
-@app.get("/", response_class=HTMLResponse)
-def index():
-    return FileResponse("backend/static/index.html")
-
-
-@app.get("/interview", response_class=HTMLResponse)
-def interview_page():
-    return FileResponse("backend/static/interview.html")
-
-
-@app.get("/report", response_class=HTMLResponse)
-def report_page():
-    return FileResponse("backend/static/report.html")
-
-
 # ── Helper: build standard response ─────────────────────────────────────────
 
 def _question_response(state: dict, **extra) -> dict:
@@ -109,9 +89,15 @@ def _question_response(state: dict, **extra) -> dict:
 async def create_session(
     resume: UploadFile = File(...),
     interview_type: str = Form("Backend"),
+    difficulty: str = Form("Medium"),
+    experience: str = Form("1-3 years"),
+    num_questions: str = Form("10"),
     db: Session = Depends(get_db),
 ):
     """Upload resume PDF and create a new interview session."""
+    if not resume.filename.lower().endswith('.pdf'):
+        raise HTTPException(400, "Only PDF files are supported.")
+        
     session_id = session_service.create_session(db, interview_type=interview_type)
 
     # Save PDF
@@ -119,11 +105,24 @@ async def create_session(
     with open(resume_path, "wb") as f:
         shutil.copyfileobj(resume.file, f)
 
+    # Map difficulty
+    diff_map = {"Easy": 1, "Medium": 3, "Hard": 5}
+    diff_int = diff_map.get(difficulty, 3)
+
+    # Map questions
+    try:
+        max_q = int(num_questions)
+    except:
+        max_q = 10
+
     # Build initial state and run graph (resume analysis → planning → first question)
     state = session_service.build_initial_state(
         session_id=session_id,
         resume_path=str(resume_path),
         interview_type=interview_type,
+        difficulty=diff_int,
+        max_questions=max_q,
+        experience_level=experience
     )
     state = interview_graph.invoke(state)
     session_service.save_state(db, session_id, state)
@@ -144,6 +143,7 @@ def get_session(session_id: str, db: Session = Depends(get_db)):
     row = session_service.get_session(db, session_id)
     if not row:
         raise HTTPException(404, "Session not found")
+    state = session_service.load_state(db, session_id)
     return {
         "session_id": row.id,
         "phase": row.phase,
@@ -151,6 +151,9 @@ def get_session(session_id: str, db: Session = Depends(get_db)):
         "candidate_name": row.candidate_name,
         "target_role": row.target_role,
         "created_at": str(row.created_at),
+        "current_question": state.get("current_question") if state else None,
+        "current_topic": state.get("current_topic") if state else None,
+        "difficulty": state.get("difficulty") if state else 2,
     }
 
 
@@ -179,7 +182,7 @@ def get_question_audio(session_id: str, db: Session = Depends(get_db)):
     audio_path = generate_tts_for_question(session_id, q_hash, question_text)
     if not audio_path or not os.path.exists(audio_path):
         raise HTTPException(500, "Failed to generate question audio")
-    return FileResponse(audio_path, media_type="audio/wav")
+    return FileResponse(audio_path, media_type="audio/mpeg")
 
 
 @app.post("/api/sessions/{session_id}/answer")
@@ -220,8 +223,27 @@ async def submit_audio_answer(
     with open(audio_path, "wb") as f:
         shutil.copyfileobj(audio.file, f)
 
+    # Extract context for better Whisper transcription accuracy (names, tech jargon)
+    candidate = state.get("candidate", {})
+    name = candidate.get("name", "")
+    skills = ", ".join(candidate.get("skills", []))
+    target_role = state.get("target_role", "")
+    
+    edu = [e.get("institution", "") for e in candidate.get("education", []) if isinstance(e, dict)]
+    exp = [e.get("company", "") for e in candidate.get("experience", []) if isinstance(e, dict)]
+    custom_terms = ", ".join(filter(None, edu + exp))
+    
+    context_prompt = f"Name: {name}. Role: {target_role}. Tech: {skills}. Institutions: {custom_terms}."
+    context_prompt = context_prompt[:800]  # Whisper prompt limit is ~224 tokens
+
     # Transcribe + analyze
-    transcript, confidence_metrics = process_answer_audio(str(audio_path))
+    transcript, confidence_metrics = process_answer_audio(str(audio_path), context_prompt=context_prompt)
+    
+    if not transcript or not transcript.strip():
+        # Clean up the empty audio file if desired
+        try: os.remove(audio_path)
+        except: pass
+        raise HTTPException(400, "No speech detected in audio. Please try recording again.")
 
     # Inject into state
     state["raw_answer"] = transcript

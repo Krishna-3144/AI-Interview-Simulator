@@ -12,6 +12,8 @@ Instructions:
 - Do NOT repeat or rephrase any question already asked.
 - Build naturally on the candidate's last answer when relevant — maintain conversational flow.
 - Difficulty level: {difficulty} (1=basic, 3=intermediate, 5=expert).
+- **CRITICAL:** Keep your question extremely concise and conversational (maximum 1-3 sentences). 
+- **CRITICAL:** Do NOT ask multi-part exam-style questions. Ask ONE specific thing and wait for the candidate's response.
 
 Return ONLY a valid JSON object:
 {{"question": "your question here"}}
@@ -23,6 +25,8 @@ Specifically, they missed or weakly covered: "{missing_concept}"
 
 Generate exactly ONE follow-up question targeting ONLY this missing concept.
 Do NOT introduce new topics. Stay focused on "{topic}".
+- **CRITICAL:** Keep your question extremely concise and conversational (maximum 1-3 sentences).
+- **CRITICAL:** Do NOT ask multi-part exam-style questions. Ask ONE specific thing.
 
 Return ONLY a valid JSON object:
 {{"question": "your follow-up question here"}}
@@ -38,6 +42,7 @@ Generate exactly ONE clarification question that:
 - Directly and professionally points out the discrepancy
 - Asks them to explain or reconcile the two statements
 - Does NOT introduce any new technical topics
+- **CRITICAL:** Keep your question extremely concise (1-2 sentences).
 
 Example format: "Earlier you mentioned [X], but just now you said [Y]. Could you clarify this for me?"
 
@@ -52,6 +57,8 @@ Current deep dive stage: {stage_name}
 Instructions:
 - Generate ONE question focusing specifically on the {stage_name} of the project.
 - Keep it conversational.
+- **CRITICAL:** Keep your question extremely concise and conversational (maximum 1-2 sentences).
+- **CRITICAL:** Do NOT ask multi-part exam-style questions. Ask ONE specific thing.
 
 Return ONLY a valid JSON object:
 {{"question": "your question here"}}
@@ -105,13 +112,12 @@ def generate_question(state: InterviewState) -> Dict[str, Any]:
             "raw_answer": ""
         }
 
-    # 2. Clarify contradiction
     if next_action == "clarify_contradiction":
         contradictions = state.get("contradictions", [])
         if contradictions:
             latest_contra = contradictions[-1]
-            earlier = latest_contra.get("earlier", "") if isinstance(latest_contra, dict) else getattr(latest_contra, "earlier", "")
-            current = latest_contra.get("current", "") if isinstance(latest_contra, dict) else getattr(latest_contra, "current", "")
+            earlier = latest_contra.get("earlier_statement", "") if isinstance(latest_contra, dict) else getattr(latest_contra, "earlier_statement", "")
+            current = latest_contra.get("current_statement", "") if isinstance(latest_contra, dict) else getattr(latest_contra, "current_statement", "")
             
             prompt = CONTRADICTION_CLARIFICATION_PROMPT.format(
                 earlier=earlier,

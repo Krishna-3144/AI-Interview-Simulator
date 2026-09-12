@@ -45,6 +45,12 @@ def plan_interview(state: dict) -> dict:
         updates["phase"] = "intro"
         return updates
 
+    # Global completion check
+    max_q = state.get("max_questions", 10)
+    if len(answers) >= max_q:
+        updates["phase"] = "report"
+        return updates
+
     # 3. Intro phase, < 3 answers
     if phase == "intro" and len(answers) < 3:
         updates["current_topic"] = "Intro"
@@ -71,6 +77,7 @@ def plan_interview(state: dict) -> dict:
 
     # 6. Technical Phase
     if phase == "technical":
+
         # Adapt difficulty based on latest_eval
         if latest_eval:
             score = latest_eval.get("score", 5.0)

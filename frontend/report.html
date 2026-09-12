@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Report — AI Interview Simulator</title>
+<link rel="stylesheet" href="css/style.css?v=1.0.4"/>
+<style>
+  .pill-strong {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .weak-topic-card {
+    background: #FAFAFA;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .weak-topic-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text-dark);
+  }
+  .weak-concept-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: white;
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+  .freq-badge {
+    background: var(--danger-bg);
+    color: var(--danger);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 12px;
+  }
+  .contra-card {
+    border-left: 4px solid var(--danger);
+    background: linear-gradient(to right, rgba(239, 68, 68, 0.05), transparent);
+    padding: 20px 24px;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    margin-bottom: 16px;
+    border-top: 1px solid rgba(239, 68, 68, 0.1);
+    border-right: 1px solid rgba(239, 68, 68, 0.1);
+    border-bottom: 1px solid rgba(239, 68, 68, 0.1);
+  }
+  .contra-topic {
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    color: var(--text-dark);
+  }
+  .contra-statement {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body style="background-color: var(--bg-light);">
+
+<nav class="top-nav">
+  <div class="logo-area">
+    <div class="brand-icon">S</div>
+    <span>Studio</span>
+  </div>
+  <div class="nav-links">
+    <button class="btn btn-outline" style="border-color: rgba(255,255,255,0.2); color: white;" onclick="window.location.href='index.html'">New Interview</button>
+  </div>
+</nav>
+
+<div class="hero-dark" style="padding-bottom: 80px; text-align: center; display: flex; flex-direction: column; align-items: center;">
+  <h1 style="margin-bottom: 8px;">Interview Complete</h1>
+  <p style="margin: 0;">Here is your detailed performance report</p>
+</div>
+
+<div class="main-container" style="max-width: 900px; margin-top: -40px; position: relative; z-index: 10;">
+  
+  <div class="white-card" style="margin-bottom: 24px; padding: 32px;">
+    <div style="display: flex; gap: 32px; flex-wrap: wrap;">
+      
+      <div style="flex: 1; min-width: 250px;">
+        <h3 style="font-size: 13px; color: var(--text-light-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">Overall Score</h3>
+        <div style="font-size: 48px; font-weight: 700; color: var(--text-dark); margin-bottom: 8px;">
+          <span id="overallScore">--</span>
+        </div>
+        <p id="overallSummary" style="color: var(--text-muted); font-size: 14px; line-height: 1.6;"></p>
+      </div>
+
+      <div style="flex: 1; min-width: 250px;">
+        <h3 style="font-size: 13px; color: var(--text-light-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">Candidate Info</h3>
+        <div style="color: var(--text-dark); font-weight: 600; margin-bottom: 4px;" id="candidateName">Candidate Name</div>
+        <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;" id="targetRole">Target Role</div>
+        
+        <div style="display: flex; gap: 12px; margin-top: 12px;">
+          <div style="background: rgba(221, 87, 58, 0.05); border: 1px solid rgba(221, 87, 58, 0.1); border-radius: 8px; padding: 12px; text-align: center; flex: 1;">
+            <div id="techScoreNum" style="font-size: 24px; font-weight: 700; color: var(--accent);">--</div>
+            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Technical</div>
+          </div>
+          <div style="background: rgba(221, 87, 58, 0.05); border: 1px solid rgba(221, 87, 58, 0.1); border-radius: 8px; padding: 12px; text-align: center; flex: 1;">
+            <div id="commScoreNum" style="font-size: 24px; font-weight: 700; color: var(--accent);">--</div>
+            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Comm</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr; gap: 24px; margin-bottom: 24px;">
+    
+    <div class="white-card">
+      <h3 style="font-size: 13px; color: var(--text-light-muted); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px;">💪 Strong Areas</h3>
+      <div id="strongAreasList" style="display: flex; flex-wrap: wrap; gap: 8px;">
+      </div>
+    </div>
+
+    <div class="white-card">
+      <h3 style="font-size: 13px; color: var(--text-light-muted); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px;">⚠️ Weak Areas (Missed Concepts)</h3>
+      <div id="weakAreasContainer" style="display: flex; flex-direction: column;">
+      </div>
+    </div>
+
+    <div class="white-card">
+      <h3 style="font-size: 13px; color: var(--text-light-muted); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px;">🔄 Statement Contradictions</h3>
+      <div id="contradictionsContainer" style="display: flex; flex-direction: column;">
+      </div>
+    </div>
+
+    <div class="white-card">
+      <h3 style="font-size: 13px; color: var(--text-light-muted); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px;">🗣️ Overall Behavior</h3>
+      <p id="behaviorSummary" style="color: var(--text-muted); font-size: 14px; line-height: 1.6;"></p>
+    </div>
+  </div>
+
+  <div style="text-align: center; margin-top: 40px; margin-bottom: 80px;">
+    <a href="index.html" class="btn btn-primary" style="display: inline-block;">Start New Interview</a>
+  </div>
+
+</div>
+
+<script src="config.js"></script>
+<script src="js/report.js?v=1.0.5"></script>
+</body>
+</html>

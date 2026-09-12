@@ -1,0 +1,278 @@
+{
+  "answer_evaluation": [
+    {
+      "id": "ae_perf_1",
+      "type": "perfect",
+      "question": "Explain how React's virtual DOM works and why it improves performance.",
+      "answer": "React creates an in-memory representation of the actual DOM called the Virtual DOM. When state changes, it updates the Virtual DOM, diffs it against the previous version using a heuristic O(n) algorithm, and calculates the minimal set of real DOM mutations needed. This batching of updates and minimizing reflows/repaints makes it much faster than direct DOM manipulation.",
+      "expected_score_min": 9.0,
+      "expected_score_max": 10.0,
+      "expected_missing_concepts": []
+    },
+    {
+      "id": "ae_perf_2",
+      "type": "perfect",
+      "question": "What are the trade-offs of using microservices vs a monolithic architecture?",
+      "answer": "Monoliths are simpler to develop, test, and deploy initially, but scale poorly as teams and codebases grow. Microservices allow independent scaling, tech stack flexibility, and fault isolation, but introduce complex distributed system issues like network latency, eventual consistency, distributed tracing, and complex CI/CD orchestration.",
+      "expected_score_min": 9.0,
+      "expected_score_max": 10.0,
+      "expected_missing_concepts": []
+    },
+    {
+      "id": "ae_perf_3",
+      "type": "perfect",
+      "question": "Describe database normalization and its purpose.",
+      "answer": "Normalization is the process of organizing database tables to reduce data redundancy and improve data integrity. It involves dividing large tables into smaller ones and defining relationships (like foreign keys). Common forms include 1NF (atomic columns), 2NF (removing partial dependencies), and 3NF (removing transitive dependencies). This prevents update, insertion, and deletion anomalies.",
+      "expected_score_min": 9.0,
+      "expected_score_max": 10.0,
+      "expected_missing_concepts": []
+    },
+    {
+      "id": "ae_perf_4",
+      "type": "perfect",
+      "question": "How do you handle state management in a large React application?",
+      "answer": "In large apps, passing props down many levels (prop drilling) becomes unmanageable. I typically use Context API for global but infrequently changing state like themes or auth. For complex, frequently updating shared state, I use Redux Toolkit or Zustand. For server state and caching, React Query or SWR are ideal because they handle loading states, retries, and deduplication out of the box.",
+      "expected_score_min": 9.0,
+      "expected_score_max": 10.0,
+      "expected_missing_concepts": []
+    },
+    {
+      "id": "ae_perf_5",
+      "type": "perfect",
+      "question": "What is the difference between TCP and UDP?",
+      "answer": "TCP is a connection-oriented protocol that guarantees delivery, ordering, and error-checking via acknowledgments and handshakes, making it reliable for web browsing (HTTP) and file transfers. UDP is connectionless, with no guarantee of delivery or ordering, but it's much faster with less overhead. It's used for real-time applications like video streaming or online gaming where dropped packets are acceptable.",
+      "expected_score_min": 9.0,
+      "expected_score_max": 10.0,
+      "expected_missing_concepts": []
+    },
+    {
+      "id": "ae_avg_1",
+      "type": "average",
+      "question": "Explain how React's virtual DOM works and why it improves performance.",
+      "answer": "React uses a virtual DOM which is like a copy of the real DOM. When things change, it updates the virtual DOM first, and then copies those changes to the real DOM. It makes it faster because it doesn't have to update the whole screen.",
+      "expected_score_min": 5.0,
+      "expected_score_max": 7.0,
+      "expected_missing_concepts": ["diffing", "batching", "reconciliation"]
+    },
+    {
+      "id": "ae_avg_2",
+      "type": "average",
+      "question": "What are the trade-offs of using microservices vs a monolithic architecture?",
+      "answer": "Microservices are better because you can split your app into smaller pieces and different teams can work on them at the same time. Monoliths are just one big codebase which gets messy.",
+      "expected_score_min": 5.0,
+      "expected_score_max": 7.0,
+      "expected_missing_concepts": ["network latency", "eventual consistency", "complexity"]
+    },
+    {
+      "id": "ae_avg_3",
+      "type": "average",
+      "question": "Describe database normalization and its purpose.",
+      "answer": "Database normalization is when you split up your tables so that you don't repeat data over and over again. It saves space and keeps things organized.",
+      "expected_score_min": 5.0,
+      "expected_score_max": 7.0,
+      "expected_missing_concepts": ["data integrity", "normal forms", "anomalies"]
+    },
+    {
+      "id": "ae_avg_4",
+      "type": "average",
+      "question": "How do you handle state management in a large React application?",
+      "answer": "I use Redux for state management. It has a store that holds all the data, and components can access it using hooks. It's much better than passing props down.",
+      "expected_score_min": 5.0,
+      "expected_score_max": 7.0,
+      "expected_missing_concepts": ["context api", "server state", "react query"]
+    },
+    {
+      "id": "ae_avg_5",
+      "type": "average",
+      "question": "What is the difference between TCP and UDP?",
+      "answer": "TCP is used for things that need to be reliable, and UDP is used for things that need to be fast. TCP makes sure all the data gets there, but UDP just sends it without checking.",
+      "expected_score_min": 5.0,
+      "expected_score_max": 7.0,
+      "expected_missing_concepts": ["connection-oriented", "handshake", "ordering"]
+    },
+    {
+      "id": "ae_non_1",
+      "type": "nonsensical",
+      "question": "Explain how React's virtual DOM works and why it improves performance.",
+      "answer": "React virtual DOM is a cloud computing service that stores HTML tags in AWS. It makes things faster because it uses blockchain to secure the data before sending it to the user's browser over 5G.",
+      "expected_score_min": 0.0,
+      "expected_score_max": 3.0,
+      "expected_missing_concepts": []
+    },
+    {
+      "id": "ae_non_2",
+      "type": "nonsensical",
+      "question": "What are the trade-offs of using microservices vs a monolithic architecture?",
+      "answer": "Microservices are tiny computers that run inside your monolithic architecture. The trade-off is that microservices use too much electricity and make your monolithic CPU overheat.",
+      "expected_score_min": 0.0,
+      "expected_score_max": 3.0,
+      "expected_missing_concepts": []
+    },
+    {
+      "id": "ae_dod_1",
+      "type": "non_answer",
+      "question": "Describe database normalization and its purpose.",
+      "answer": "I haven't really worked with databases much in my recent roles, mostly frontend.",
+      "expected_score_min": 0.0,
+      "expected_score_max": 2.0,
+      "expected_missing_concepts": []
+    },
+    {
+      "id": "ae_dod_2",
+      "type": "non_answer",
+      "question": "How do you handle state management in a large React application?",
+      "answer": "That's a good question. State management is definitely important. Usually I just follow whatever the tech lead sets up.",
+      "expected_score_min": 0.0,
+      "expected_score_max": 2.0,
+      "expected_missing_concepts": []
+    },
+    {
+      "id": "ae_dod_3",
+      "type": "non_answer",
+      "question": "What is the difference between TCP and UDP?",
+      "answer": "I don't know, I'm not a networking guy.",
+      "expected_score_min": 0.0,
+      "expected_score_max": 1.0,
+      "expected_missing_concepts": []
+    }
+  ],
+  "contradiction_detection": [
+    {
+      "id": "cd_true_1",
+      "type": "true_contradiction",
+      "earlier": "I was the sole backend developer at my last company, I wrote everything in Node.js.",
+      "current": "At my last company, I didn't touch the backend at all, I was strictly writing CSS and React.",
+      "expected_found": true
+    },
+    {
+      "id": "cd_true_2",
+      "type": "true_contradiction",
+      "earlier": "I have 5 years of professional Python experience.",
+      "current": "I've never actually used Python professionally, just a bit in college.",
+      "expected_found": true
+    },
+    {
+      "id": "cd_true_3",
+      "type": "true_contradiction",
+      "earlier": "For the chat feature, we used PostgreSQL as our primary database.",
+      "current": "For the chat feature, our primary database was MongoDB, we didn't use any SQL databases.",
+      "expected_found": true
+    },
+    {
+      "id": "cd_true_4",
+      "type": "true_contradiction",
+      "earlier": "I successfully deployed the application to AWS using Kubernetes.",
+      "current": "We actually couldn't get the application to deploy to AWS, so it never went to production.",
+      "expected_found": true
+    },
+    {
+      "id": "cd_false_1",
+      "type": "basic_false_positive",
+      "earlier": "I used React for the frontend of the e-commerce app.",
+      "current": "For the e-commerce app frontend, I ended up using React Native so we could launch on mobile.",
+      "expected_found": false
+    },
+    {
+      "id": "cd_false_2",
+      "type": "basic_false_positive",
+      "earlier": "I managed a team of 3 developers at my last job.",
+      "current": "My team at the last job was pretty small, just me and a few junior devs.",
+      "expected_found": false
+    },
+    {
+      "id": "cd_false_3",
+      "type": "basic_false_positive",
+      "earlier": "We built the API using Python and FastAPI.",
+      "current": "Our backend was heavily Python-based, utilizing asynchronous frameworks to handle traffic.",
+      "expected_found": false
+    },
+    {
+      "id": "cd_false_4",
+      "type": "basic_false_positive",
+      "earlier": "I worked on optimizing the database queries to reduce latency.",
+      "current": "I added caching with Redis to speed up the slow database queries.",
+      "expected_found": false
+    },
+    {
+      "id": "cd_adv_1",
+      "type": "adversarial_false_positive",
+      "earlier": "For the Chat App project, I used PostgreSQL because we needed strict ACID compliance.",
+      "current": "For the E-commerce site, I chose MongoDB because the schema was highly dynamic.",
+      "expected_found": false
+    },
+    {
+      "id": "cd_adv_2",
+      "type": "adversarial_false_positive",
+      "earlier": "When I worked at Google, I led a team of 15 engineers on the search infrastructure.",
+      "current": "When I was at the startup before Google, I was the sole contributor and had no team.",
+      "expected_found": false
+    },
+    {
+      "id": "cd_adv_3",
+      "type": "adversarial_false_positive",
+      "earlier": "My primary language for the backend service was Java.",
+      "current": "I wrote all the data pipelines in Python.",
+      "expected_found": false
+    },
+    {
+      "id": "cd_adv_4",
+      "type": "adversarial_false_positive",
+      "earlier": "We deployed the web app exclusively using AWS EC2 instances.",
+      "current": "The machine learning models were deployed strictly on Google Cloud Platform.",
+      "expected_found": false
+    }
+  ],
+  "question_generation": [
+    {
+      "id": "qg_1",
+      "topic": "Python Generators",
+      "difficulty": 2,
+      "history": []
+    },
+    {
+      "id": "qg_2",
+      "topic": "Distributed Systems Consensus",
+      "difficulty": 5,
+      "history": []
+    },
+    {
+      "id": "qg_3",
+      "topic": "React Hooks",
+      "difficulty": 3,
+      "history": [
+        {"role": "interviewer", "content": "How do you handle state in React?"},
+        {"role": "candidate", "content": "I use Redux mostly."}
+      ]
+    },
+    {
+      "id": "qg_4",
+      "topic": "SQL Indexing",
+      "difficulty": 4,
+      "history": []
+    },
+    {
+      "id": "qg_5",
+      "topic": "Docker Basics",
+      "difficulty": 1,
+      "history": []
+    },
+    {
+      "id": "qg_6",
+      "topic": "System Design: Rate Limiting",
+      "difficulty": 4,
+      "history": []
+    },
+    {
+      "id": "qg_7",
+      "topic": "JavaScript Event Loop",
+      "difficulty": 3,
+      "history": []
+    },
+    {
+      "id": "qg_8",
+      "topic": "Kubernetes Architecture",
+      "difficulty": 5,
+      "history": []
+    }
+  ]
+}

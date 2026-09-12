@@ -7,7 +7,7 @@ import uuid
 from sqlalchemy.orm import Session
 
 from backend.db.models import InterviewSession
-from backend.core.state import InterviewState
+from backend.core.state import InterviewState, CandidateProfile
 
 
 def create_session(db: Session, interview_type: str = "Backend") -> str:
@@ -22,7 +22,11 @@ def build_initial_state(
     session_id: str,
     resume_path: str = "",
     interview_type: str = "Backend",
+    difficulty: int = 3,
+    max_questions: int = 10,
+    experience_level: str = "1-3 years"
 ) -> InterviewState:
+    
     return InterviewState(
         session_id=session_id,
         phase="resume_analysis",
@@ -35,7 +39,9 @@ def build_initial_state(
         raw_answer="",
         topics=[],
         topic_questions={},
-        difficulty=2,
+        difficulty=difficulty,
+        max_questions=max_questions,
+        experience_level=experience_level,
         follow_ups=0,
         next_action="idle",
         answers=[],

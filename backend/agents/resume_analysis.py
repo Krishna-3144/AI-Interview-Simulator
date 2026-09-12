@@ -51,20 +51,12 @@ def analyze_resume(state: dict) -> dict:
     projects = candidate.get("projects", [])
     selected_project = projects[0]["name"] if projects else None
 
+    candidate["experience_level"] = state.get("experience_level", "1-3 years")
+
     return {
         "candidate": candidate,
         "topics": topics,
-        "topic_questions": {},
-        "answers": [],
-        "history": [],
-        "confidence_timeline": [],
-        "follow_ups": 0,
-        "difficulty": 2,
-        "next_action": "idle",
         "phase": "intro",
-        "contradiction_found": False,
-        "contradictions": [],
-        "project_dive_index": 0,
-        "resume_path": None,
-        "selected_project": selected_project
+        "selected_project": selected_project,
+        "resume_path": None
     }

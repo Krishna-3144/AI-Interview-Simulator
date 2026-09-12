@@ -16,6 +16,7 @@ class CandidateProfile(TypedDict):
     experience: list[dict]     # [{company, role, duration}]
     education: list[dict]      # [{institution, degree, year}]
     target_role: str
+    experience_level: str
 
 
 class EvaluationResult(TypedDict):
@@ -35,8 +36,9 @@ class AnswerRecord(TypedDict):
 
 
 class Contradiction(TypedDict):
-    earlier: str
-    current: str
+    category: str
+    evidence: list[str]
+    reason: str
     topic: str
 
 
@@ -60,6 +62,8 @@ class InterviewState(TypedDict):
     topics: list[str]                   # ordered topic queue
     topic_questions: dict[str, int]     # topic → number of questions asked
     difficulty: int                     # current difficulty 1-5
+    max_questions: int                  # maximum total questions for the interview
+    experience_level: str               # e.g., '1-3 years'
     follow_ups: int                     # current follow-up depth counter
     next_action: str                    # idle | ask_follow_up | clarify_contradiction | advance_topic | generate_report
 

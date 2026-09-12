@@ -1,0 +1,365 @@
+{
+  "_meta": {
+    "version": "v2",
+    "description": "Frozen ground-truth evaluation dataset for AI Interview Simulator, expanded from v1. Expected values were written BEFORE running any model against this set. Each case_type from v1 has been replicated across additional topics to increase sample size without diluting rigor. Do not modify expected values after seeing model output.",
+    "case_counts": {
+      "answer_evaluation_cases": 38,
+      "contradiction_detection_cases": 28,
+      "question_generation_cases": 22,
+      "total": 88
+    },
+    "instructions_for_scoring": {
+      "answer_evaluation": "Score = Technical Correctness (0-4) + Depth & Nuance (0-3) + Communication (0-3), max 10. Compare to expected_score_range. Compare missing_concepts to expected_missing_concepts via case-insensitive keyword match; log overlap fraction per case.",
+      "contradiction_detection": "Binary found: true/false. Log stated reasoning for manual spot-check - correct verdict with wrong reasoning is a partial failure worth flagging separately.",
+      "question_generation": "Scored via LLM-as-judge against expected_judge_criteria, binary pass/fail + reasoning. Manually spot-check at least every 5th case. Judge is not fully independent of system under test - note this caveat in the report."
+    }
+  },
+
+  "answer_evaluation_cases": [
+    { "id": "ae_1", "topic": "Python", "question": "Explain how Python's garbage collection works.",
+      "answer": "Python uses reference counting as the primary mechanism, every object tracks how many references point to it, and it's deallocated when that count hits zero. For cyclic references that reference counting can't catch, Python has a generational garbage collector that periodically scans for unreachable cycles, using three generations to optimize for the fact that most objects die young.",
+      "expected_score_range": [9, 10], "expected_missing_concepts": [], "case_type": "perfect" },
+
+    { "id": "ae_2", "topic": "Python", "question": "Explain how Python's garbage collection works.",
+      "answer": "Python cleans up memory automatically when objects aren't used anymore, so you don't have to manage it yourself like in C.",
+      "expected_score_range": [3, 5], "expected_missing_concepts": ["reference counting", "cyclic garbage collector", "generational collection"], "case_type": "average_vague" },
+
+    { "id": "ae_3", "topic": "Python", "question": "Explain how Python's garbage collection works.",
+      "answer": "Garbage collection in Python works by scanning the stack every millisecond and using a mark-and-sweep algorithm exclusively, similar to Java's JVM, and it's manually triggered by calling collect() before every function return.",
+      "expected_score_range": [1, 3], "expected_missing_concepts": ["reference counting"], "case_type": "confident_but_wrong",
+      "notes": "Fluent, confident, technically dense but factually incorrect - tests whether grader rewards confidence over correctness." },
+
+    { "id": "ae_4", "topic": "Python", "question": "Explain how Python's garbage collection works.",
+      "answer": "I don't really remember the details, something about counting references maybe?",
+      "expected_score_range": [0, 2], "expected_missing_concepts": ["cyclic garbage collector", "generational collection"], "case_type": "non_answer_partial_credit" },
+
+    { "id": "ae_5", "topic": "System Design", "question": "How would you design a rate limiter for an API?",
+      "answer": "I'd use a token bucket algorithm, each client gets a bucket that refills at a fixed rate, and requests consume tokens; if the bucket's empty, the request is rejected or queued. I'd implement it with Redis using atomic INCR/EXPIRE for distributed consistency across multiple API servers, and I'd consider sliding window log as an alternative for stricter accuracy at the cost of more memory.",
+      "expected_score_range": [9, 10], "expected_missing_concepts": [], "case_type": "perfect" },
+
+    { "id": "ae_6", "topic": "System Design", "question": "How would you design a rate limiter for an API?",
+      "answer": "You could just count requests per user and block them if they send too many in a short time.",
+      "expected_score_range": [4, 6], "expected_missing_concepts": ["distributed consistency", "specific algorithm (token bucket/sliding window)"], "case_type": "average_vague" },
+
+    { "id": "ae_7", "topic": "System Design", "question": "How would you design a rate limiter for an API?",
+      "answer": "Rate limiting is usually handled by the frontend disabling the submit button after one click, and the database automatically throttles duplicate rows.",
+      "expected_score_range": [1, 2], "expected_missing_concepts": ["server-side enforcement", "distributed consistency", "specific algorithm"], "case_type": "hallucination" },
+
+    { "id": "ae_8", "topic": "SQL Indexing", "question": "When would adding an index hurt performance?",
+      "answer": "Indexes speed up reads but slow down writes, since every INSERT/UPDATE/DELETE has to update the index structure too. They also cost storage, and on tables with high write volume or low-cardinality columns (like a boolean flag), an index can add overhead without much read benefit, the optimizer may not even use it if it's not selective enough.",
+      "expected_score_range": [9, 10], "expected_missing_concepts": [], "case_type": "perfect" },
+
+    { "id": "ae_9", "topic": "SQL Indexing", "question": "When would adding an index hurt performance?",
+      "answer": "Indexes are always good for performance, more indexes generally make queries faster with no real downside.",
+      "expected_score_range": [0, 2], "expected_missing_concepts": ["write overhead", "storage cost", "low cardinality issue"], "case_type": "confidently_wrong_direction" },
+
+    { "id": "ae_10", "topic": "SQL Indexing", "question": "When would adding an index hurt performance?",
+      "answer": "Write overhead I think, and maybe storage stuff.",
+      "expected_score_range": [3, 5], "expected_missing_concepts": ["low cardinality issue", "elaboration/explanation depth"], "case_type": "correct_keywords_no_depth" },
+
+    { "id": "ae_11", "topic": "JavaScript Event Loop", "question": "Explain the difference between microtasks and macrotasks in JS.",
+      "answer": "Microtasks (like Promise callbacks and queueMicrotask) run after the current call stack empties but before the next macrotask (like setTimeout, I/O, or UI rendering). All queued microtasks are drained completely before the event loop moves to the next macrotask, which is why Promise.then() callbacks run before a setTimeout(fn, 0) even though both are scheduled asynchronously.",
+      "expected_score_range": [9, 10], "expected_missing_concepts": [], "case_type": "perfect" },
+
+    { "id": "ae_12", "topic": "JavaScript Event Loop", "question": "Explain the difference between microtasks and macrotasks in JS.",
+      "answer": "Microtasks and macrotasks are basically the same thing, both just run async code eventually, the order doesn't really matter for correctness.",
+      "expected_score_range": [0, 2], "expected_missing_concepts": ["microtask queue priority", "drain-before-next-macrotask behavior", "concrete example"], "case_type": "hallucination_dismissive" },
+
+    { "id": "ae_13", "topic": "Docker", "question": "What's the difference between a Docker image and a container?",
+      "answer": "An image is a read-only template, a snapshot of filesystem layers plus metadata, and a container is a running instance of that image with its own writable layer on top. You can run multiple containers from the same image, each isolated from the others.",
+      "expected_score_range": [8, 10], "expected_missing_concepts": [], "case_type": "perfect" },
+
+    { "id": "ae_14", "topic": "Docker", "question": "What's the difference between a Docker image and a container?",
+      "answer": "An image is like the container but before you start it.",
+      "expected_score_range": [3, 5], "expected_missing_concepts": ["read-only layers", "writable layer", "multiple containers from one image"], "case_type": "average_vague" },
+
+    { "id": "ae_15", "topic": "Kubernetes", "question": "What does a Kubernetes Service do?",
+      "answer": "",
+      "expected_score_range": [0, 0], "expected_missing_concepts": ["stable network endpoint", "load balancing across pods", "service discovery"], "case_type": "empty_answer",
+      "notes": "Grader must not crash and must score 0, not hallucinate credit." },
+
+    { "id": "ae_16", "topic": "Redis", "question": "How does Redis achieve persistence, and what are the tradeoffs?",
+      "answer": "Redis offers RDB (point-in-time snapshots at intervals) and AOF (append-only log of every write command, replayed on restart). RDB is faster to restart from and more compact but can lose data since the last snapshot; AOF is more durable but larger and slower to replay, though you can configure fsync frequency to trade durability for performance. Many setups use both together for a balance.",
+      "expected_score_range": [9, 10], "expected_missing_concepts": [], "case_type": "perfect" },
+
+    { "id": "ae_17", "topic": "Redis", "question": "How does Redis achieve persistence, and what are the tradeoffs?",
+      "answer": "Redis just saves everything to disk automatically so you never lose data.",
+      "expected_score_range": [0, 2], "expected_missing_concepts": ["RDB snapshots", "AOF log", "durability vs performance tradeoff"], "case_type": "confidently_wrong_direction" },
+
+    { "id": "ae_18", "topic": "Redis", "question": "How does Redis achieve persistence, and what are the tradeoffs?",
+      "answer": "There's some kind of snapshot thing and also a log file option I think.",
+      "expected_score_range": [3, 5], "expected_missing_concepts": ["specific tradeoffs", "fsync configuration"], "case_type": "correct_keywords_no_depth" },
+
+    { "id": "ae_19", "topic": "gRPC", "question": "Why would you choose gRPC over REST for internal service communication?",
+      "answer": "gRPC uses HTTP/2 and Protocol Buffers, giving you binary serialization that's faster and smaller than JSON, plus built-in support for streaming (unary, server-streaming, client-streaming, bidirectional). The strict schema via .proto files gives you strong typing and codegen across languages, which helps a lot for internal microservices where you control both ends. REST is usually simpler for public APIs where human-readability and broad client compatibility matter more.",
+      "expected_score_range": [9, 10], "expected_missing_concepts": [], "case_type": "perfect" },
+
+    { "id": "ae_20", "topic": "gRPC", "question": "Why would you choose gRPC over REST for internal service communication?",
+      "answer": "gRPC is newer so it's just generally better and faster than REST in every case.",
+      "expected_score_range": [1, 3], "expected_missing_concepts": ["binary serialization/protobuf", "streaming support", "schema/codegen", "context of when REST is still preferable"], "case_type": "confidently_wrong_direction" },
+
+    { "id": "ae_21", "topic": "gRPC", "question": "Why would you choose gRPC over REST for internal service communication?",
+      "answer": "Something about protobuf being faster than JSON.",
+      "expected_score_range": [3, 5], "expected_missing_concepts": ["streaming support", "schema/codegen", "HTTP/2"], "case_type": "correct_keywords_no_depth" },
+
+    { "id": "ae_22", "topic": "React Hooks", "question": "Why do you need the dependency array in useEffect, and what happens if you get it wrong?",
+      "answer": "The dependency array tells React when to re-run the effect, it compares values by reference/value each render and only re-executes if something changed. If you omit a dependency that's actually used inside, you get a stale closure bug where the effect keeps referencing an old value. If you pass an empty array but the effect depends on props/state, you'll silently miss updates. Overshooting with unnecessary dependencies can cause infinite re-render loops if the dependency is a new object/function reference every render.",
+      "expected_score_range": [9, 10], "expected_missing_concepts": [], "case_type": "perfect" },
+
+    { "id": "ae_23", "topic": "React Hooks", "question": "Why do you need the dependency array in useEffect, and what happens if you get it wrong?",
+      "answer": "It just controls when the effect runs, you usually just leave it empty.",
+      "expected_score_range": [2, 4], "expected_missing_concepts": ["stale closure bug", "missing dependency consequences", "infinite loop risk"], "case_type": "average_vague" },
+
+    { "id": "ae_24", "topic": "React Hooks", "question": "Why do you need the dependency array in useEffect, and what happens if you get it wrong?",
+      "answer": "The dependency array is optional and React automatically figures out the right dependencies for you using AI-based static analysis at build time.",
+      "expected_score_range": [0, 2], "expected_missing_concepts": ["stale closure bug", "manual dependency specification"], "case_type": "hallucination" },
+
+    { "id": "ae_25", "topic": "Kubernetes", "question": "What's the difference between a Deployment and a StatefulSet?",
+      "answer": "A Deployment manages stateless, interchangeable pod replicas, pods get random names and can be replaced in any order since they don't need stable identity or storage. A StatefulSet gives each pod a stable, unique network identity and ordinal index (pod-0, pod-1...) plus stable persistent storage tied to that identity across rescheduling, which matters for things like databases where ordering and identity persistence are required.",
+      "expected_score_range": [9, 10], "expected_missing_concepts": [], "case_type": "perfect" },
+
+    { "id": "ae_26", "topic": "Kubernetes", "question": "What's the difference between a Deployment and a StatefulSet?",
+      "answer": "StatefulSets are for stateful apps and Deployments are for stateless apps.",
+      "expected_score_range": [3, 5], "expected_missing_concepts": ["stable network identity", "ordinal indexing", "persistent storage binding"], "case_type": "correct_keywords_no_depth" },
+
+    { "id": "ae_27", "topic": "Kubernetes", "question": "What's the difference between a Deployment and a StatefulSet?",
+      "answer": "There's no real difference, Kubernetes treats all pods the same way regardless of which controller manages them.",
+      "expected_score_range": [0, 1], "expected_missing_concepts": ["stable network identity", "ordinal indexing", "persistent storage binding"], "case_type": "hallucination" },
+
+    { "id": "ae_28", "topic": "Distributed Systems", "question": "Explain the CAP theorem and how it applies to real systems.",
+      "answer": "CAP theorem says a distributed system can only guarantee two of Consistency, Availability, and Partition tolerance at once during a network partition. Since partitions are unavoidable in real distributed systems, the real choice is CP vs AP, e.g. a system like traditional RDBMS replicas might favor consistency and reject requests during a partition, while systems like Cassandra favor availability and accept the risk of stale reads, resolving conflicts later.",
+      "expected_score_range": [9, 10], "expected_missing_concepts": [], "case_type": "perfect" },
+
+    { "id": "ae_29", "topic": "Distributed Systems", "question": "Explain the CAP theorem and how it applies to real systems.",
+      "answer": "You can have consistency, availability, and partition tolerance all at the same time if you design the system well enough.",
+      "expected_score_range": [0, 2], "expected_missing_concepts": ["partition tolerance is unavoidable", "CP vs AP tradeoff", "real-world example"], "case_type": "confidently_wrong_direction" },
+
+    { "id": "ae_30", "topic": "Distributed Systems", "question": "Explain the CAP theorem and how it applies to real systems.",
+      "answer": "It's about consistency and availability being hard to have at once, something like that.",
+      "expected_score_range": [3, 5], "expected_missing_concepts": ["partition tolerance", "concrete real-world example", "CP vs AP naming"], "case_type": "correct_keywords_no_depth" },
+
+    { "id": "ae_31", "topic": "Authentication", "question": "What's the difference between JWT and session-based authentication?",
+      "answer": "Session-based auth stores session state server-side (e.g. in Redis or a DB), and the client holds only an opaque session ID cookie; this makes revocation trivial since you just delete the server-side record. JWTs are self-contained and stateless, the server verifies a signature instead of looking up state, which scales better horizontally but makes revocation harder since a valid-but-compromised token remains valid until expiry unless you maintain a blocklist, which partially defeats the statelessness benefit.",
+      "expected_score_range": [9, 10], "expected_missing_concepts": [], "case_type": "perfect" },
+
+    { "id": "ae_32", "topic": "Authentication", "question": "What's the difference between JWT and session-based authentication?",
+      "answer": "JWT is more modern and secure so you should always use it instead of sessions.",
+      "expected_score_range": [1, 3], "expected_missing_concepts": ["stateless vs stateful tradeoff", "revocation difficulty", "when sessions are preferable"], "case_type": "confidently_wrong_direction" },
+
+    { "id": "ae_33", "topic": "Authentication", "question": "What's the difference between JWT and session-based authentication?",
+      "answer": "JWT doesn't need a database lookup and sessions do, something like that.",
+      "expected_score_range": [3, 5], "expected_missing_concepts": ["revocation tradeoff", "concrete mechanism explanation"], "case_type": "correct_keywords_no_depth" },
+
+    { "id": "ae_34", "topic": "Caching", "question": "What's the difference between cache-aside and write-through caching strategies?",
+      "answer": "Cache-aside (lazy loading): the app checks the cache first, and on a miss, loads from the DB and populates the cache, the cache can go stale if the DB is updated elsewhere without invalidation. Write-through: every write goes to the cache and the DB synchronously, keeping them consistent, but write latency increases since you're paying for both writes on every request, and cache-aside is often preferred for read-heavy workloads while write-through suits workloads needing strong read-after-write consistency.",
+      "expected_score_range": [9, 10], "expected_missing_concepts": [], "case_type": "perfect" },
+
+    { "id": "ae_35", "topic": "Caching", "question": "What's the difference between cache-aside and write-through caching strategies?",
+      "answer": "Both strategies are the same thing, they just cache data so it's faster.",
+      "expected_score_range": [0, 2], "expected_missing_concepts": ["lazy load on miss", "write synchronization difference", "staleness/consistency tradeoff"], "case_type": "hallucination_dismissive" },
+
+    { "id": "ae_36", "topic": "Caching", "question": "What's the difference between cache-aside and write-through caching strategies?",
+      "answer": "",
+      "expected_score_range": [0, 0], "expected_missing_concepts": ["lazy load on miss", "write synchronization difference", "staleness/consistency tradeoff"], "case_type": "empty_answer" },
+
+    { "id": "ae_37", "topic": "Testing", "question": "What's the difference between mocking and stubbing in unit tests?",
+      "answer": "A stub returns predetermined/canned responses to calls made during the test, with no assertions on how it was called. A mock also does that but additionally records and lets you assert on interactions, e.g. verifying a method was called exactly once with specific arguments. Overusing mocks can make tests brittle since they couple tests to implementation details rather than behavior.",
+      "expected_score_range": [8, 10], "expected_missing_concepts": [], "case_type": "perfect" },
+
+    { "id": "ae_38", "topic": "Testing", "question": "What's the difference between mocking and stubbing in unit tests?",
+      "answer": "Mocking and stubbing are just two different words for the exact same thing, it doesn't really matter which term you use.",
+      "expected_score_range": [0, 2], "expected_missing_concepts": ["interaction verification vs canned response", "brittleness tradeoff"], "case_type": "hallucination_dismissive" }
+  ],
+
+  "contradiction_detection_cases": [
+    { "id": "cd_1", "history": [{"role": "candidate", "content": "I have 5 years of professional Python experience."}],
+      "current_answer": "Honestly I've never really used Python in a real project.", "expected_found": true, "case_type": "true_contradiction_direct" },
+
+    { "id": "cd_2", "history": [{"role": "candidate", "content": "I led the backend rewrite from a monolith to microservices."}],
+      "current_answer": "I've never actually worked on migrating a monolith to microservices before.", "expected_found": true, "case_type": "true_contradiction_direct" },
+
+    { "id": "cd_3", "history": [{"role": "candidate", "content": "Our team used PostgreSQL for the main datastore."}, {"role": "candidate", "content": "We chose Postgres because of strong JSONB support."}],
+      "current_answer": "Actually we never used a relational database on that project.", "expected_found": true, "case_type": "true_contradiction_after_reinforcement",
+      "notes": "Should be caught even though the false claim was reinforced twice before being contradicted." },
+
+    { "id": "cd_4", "history": [{"role": "candidate", "content": "I was the sole developer for the first six months."}],
+      "current_answer": "Later, once two more engineers joined, we split the codebase into modules.", "expected_found": false, "case_type": "false_positive_timeline_progression",
+      "notes": "Consistent (sole dev THEN team grew) - tests whether model over-flags normal timeline progression." },
+
+    { "id": "cd_5", "history": [{"role": "candidate", "content": "I used React for the frontend."}],
+      "current_answer": "Yeah I actually used React Native for the mobile version of that same app.", "expected_found": false, "case_type": "false_positive_elaboration" },
+
+    { "id": "cd_6", "history": [{"role": "candidate", "content": "I led a team of 10 engineers at my last company."}],
+      "current_answer": "At my current startup, I'm the only developer on the team.", "expected_found": false, "case_type": "false_positive_different_context" },
+
+    { "id": "cd_7", "history": [{"role": "candidate", "content": "On the recommendation-engine project, I preferred a microservices architecture for scalability."}],
+      "current_answer": "On the internal admin dashboard project, we went with a monolith since it was a small team and low traffic.", "expected_found": false, "case_type": "adversarial_false_positive",
+      "notes": "Surface-opposite architecture choices but different projects/constraints - hard case pair with cd_8." },
+
+    { "id": "cd_8", "history": [{"role": "candidate", "content": "I'd always choose SQL over NoSQL for any project."}],
+      "current_answer": "For the analytics pipeline, we used MongoDB because the schema was too unstable for a relational model early on.", "expected_found": true, "case_type": "adversarial_true_contradiction",
+      "notes": "Earlier claim was absolute ('always'), so a genuine counter-example is a real contradiction. Pairs with cd_7 to test whether model distinguishes absolute claims from preferences." },
+
+    { "id": "cd_9", "history": [{"role": "candidate", "content": "I mostly write unit tests, not much experience with integration testing."}],
+      "current_answer": "For that project we had a full integration test suite that I helped maintain weekly.", "expected_found": true, "case_type": "true_contradiction_experience_claim" },
+
+    { "id": "cd_10", "history": [{"role": "candidate", "content": "I'm not very confident with Kubernetes, I've only read about it."}],
+      "current_answer": "When I set up our Kubernetes cluster, I configured the ingress controller and horizontal pod autoscaling myself.", "expected_found": true, "case_type": "true_contradiction_confidence_vs_claim" },
+
+    { "id": "cd_11", "history": [{"role": "candidate", "content": "I used Redux for state management in that app."}],
+      "current_answer": "For simpler components in the same app, I just used local component state instead of Redux.", "expected_found": false, "case_type": "false_positive_nuanced_coexistence" },
+
+    { "id": "cd_12", "history": [], "current_answer": "I have extensive experience with GraphQL.", "expected_found": false, "case_type": "edge_case_empty_history" },
+
+    { "id": "cd_13", "history": [{"role": "candidate", "content": "I always write tests before implementation, strict TDD."}],
+      "current_answer": "On this particular hotfix under a production outage, I skipped writing tests and shipped the fix directly, then added tests after.", "expected_found": true, "case_type": "adversarial_true_contradiction",
+      "notes": "Absolute claim ('always... strict TDD') contradicted by a specific admitted exception - tests whether model catches contradictions of absolute claims even when framed as an understandable exception." },
+
+    { "id": "cd_14", "history": [{"role": "candidate", "content": "I generally prefer writing tests before implementation when time allows."}],
+      "current_answer": "On this particular hotfix under a production outage, I skipped writing tests and shipped the fix directly, then added tests after.", "expected_found": false, "case_type": "adversarial_false_positive",
+      "notes": "Same current_answer as cd_13, but the earlier claim is hedged ('generally... when time allows') not absolute - should NOT be flagged. Direct pair with cd_13 testing sensitivity to hedged vs absolute language." },
+
+    { "id": "cd_15", "history": [{"role": "candidate", "content": "I have experience with AWS, mostly EC2 and S3."}],
+      "current_answer": "I've also worked with Azure for a different client's infrastructure.", "expected_found": false, "case_type": "false_positive_additive_not_contradictory",
+      "notes": "Having experience with multiple cloud providers is additive, not contradictory." },
+
+    { "id": "cd_16", "history": [{"role": "candidate", "content": "I only have experience with AWS, never touched other cloud providers."}],
+      "current_answer": "I've also worked with Azure for a different client's infrastructure.", "expected_found": true, "case_type": "true_contradiction_absolute_claim",
+      "notes": "Pairs with cd_15, same current_answer, but earlier claim here is exclusive ('only... never'), making it a real contradiction." },
+
+    { "id": "cd_17", "history": [{"role": "candidate", "content": "The project took about 3 months to ship."}],
+      "current_answer": "Including the initial planning phase before coding started, the whole thing spanned closer to 5 months.", "expected_found": false, "case_type": "false_positive_scope_clarification",
+      "notes": "Clarifying what's included in a timeframe estimate isn't a contradiction." },
+
+    { "id": "cd_18", "history": [{"role": "candidate", "content": "The project took about 3 months to ship, start to finish, including everything."}],
+      "current_answer": "Actually it took almost a year in total.", "expected_found": true, "case_type": "true_contradiction_quantitative",
+      "notes": "First claim explicitly scoped as complete ('including everything'), so a very different number is a real contradiction." },
+
+    { "id": "cd_19", "history": [{"role": "candidate", "content": "I wrote the entire backend myself."}],
+      "current_answer": "My teammate handled the payments module while I built the rest.", "expected_found": true, "case_type": "true_contradiction_scope_overclaim",
+      "notes": "Claiming sole authorship of 'entire' backend contradicted by later admitting a teammate built part of it." },
+
+    { "id": "cd_20", "history": [{"role": "candidate", "content": "I was the main contributor to the backend."}],
+      "current_answer": "My teammate handled the payments module while I built the rest.", "expected_found": false, "case_type": "false_positive_main_vs_sole",
+      "notes": "Pairs with cd_19, 'main contributor' (not 'entire/sole') is compatible with a teammate handling one module." },
+
+    { "id": "cd_21", "history": [{"role": "candidate", "content": "I'm fluent in French."}],
+      "current_answer": "I mentioned French, but honestly I only know a few basic phrases from Duolingo.", "expected_found": true, "case_type": "true_contradiction_self_correction",
+      "notes": "Candidate contradicts their own overclaim; grader should catch self-corrections too, not just answer-vs-answer conflicts." },
+
+    { "id": "cd_22", "history": [{"role": "candidate", "content": "I'm comfortable with basic conversational French."}],
+      "current_answer": "I mentioned French, but honestly I only know a few basic phrases from Duolingo.", "expected_found": false, "case_type": "false_positive_consistent_self_assessment",
+      "notes": "Pairs with cd_21, a modest initial claim followed by a modest clarification is consistent, not contradictory." },
+
+    { "id": "cd_23", "history": [{"role": "candidate", "content": "I've deployed to production using blue-green deployments before."}],
+      "current_answer": "For that same release process, we actually used canary deployments, gradually shifting traffic percentage.", "expected_found": true, "case_type": "true_contradiction_technique_swap",
+      "notes": "Blue-green and canary are distinct deployment strategies; claiming one then describing the other for the same process is a real contradiction." },
+
+    { "id": "cd_24", "history": [{"role": "candidate", "content": "I've used various progressive deployment strategies before."}],
+      "current_answer": "For that release process, we used canary deployments, gradually shifting traffic percentage.", "expected_found": false, "case_type": "false_positive_general_then_specific",
+      "notes": "Pairs with cd_23, a general claim ('various strategies') followed by one specific example is elaboration, not contradiction." },
+
+    { "id": "cd_25", "history": [{"role": "candidate", "content": "I have zero experience with machine learning."}],
+      "current_answer": "In that project, I fine-tuned a BERT model for sentiment classification.", "expected_found": true, "case_type": "true_contradiction_direct" },
+
+    { "id": "cd_26", "history": [{"role": "candidate", "content": "I don't have deep ML expertise, mostly just used pre-built APIs."}],
+      "current_answer": "In that project, I called a sentiment-analysis API rather than building a model myself.", "expected_found": false, "case_type": "false_positive_consistent_claim",
+      "notes": "Pairs with cd_25, a modest scoped claim followed by a matching example is consistent." },
+
+    { "id": "cd_27", "history": [{"role": "candidate", "content": "This was a solo side project with no other contributors."}, {"role": "candidate", "content": "I designed the whole architecture myself over a weekend."}],
+      "current_answer": "My friend actually reviewed my PRs and suggested the caching layer.", "expected_found": true, "case_type": "true_contradiction_after_reinforcement",
+      "notes": "Solo-project claim reinforced twice, then contradicted by mentioning a collaborator's substantive contribution." },
+
+    { "id": "cd_28", "history": [{"role": "candidate", "content": "This was mostly a solo side project."}],
+      "current_answer": "My friend gave me some feedback on the UI at one point, but I built everything.", "expected_found": false, "case_type": "false_positive_minor_help_not_contradictory",
+      "notes": "Pairs with cd_27, 'mostly solo' plus minor external feedback is consistent, not a contradiction, contrasting with the substantive collaboration in cd_27." }
+  ],
+
+  "question_generation_cases": [
+    { "id": "qg_1", "topic": "Distributed Systems Consensus", "difficulty": 5, "history": [],
+      "expected_judge_criteria": "Question must require reasoning about consensus algorithms (Raft/Paxos, quorum, network partitions, CAP tradeoffs) at senior/staff level, not a definitional 'what is consensus' question.", "case_type": "standard" },
+
+    { "id": "qg_2", "topic": "Docker Basics", "difficulty": 5, "history": [],
+      "expected_judge_criteria": "Topic label sounds beginner-friendly but difficulty is 5, question must still be genuinely hard (e.g. multi-stage build optimization, namespace/cgroup internals, layer caching pitfalls), not a basic 'what is a container' question.", "case_type": "difficulty_topic_mismatch_trap" },
+
+    { "id": "qg_3", "topic": "Kubernetes Architecture", "difficulty": 1, "history": [],
+      "expected_judge_criteria": "Topic sounds advanced but difficulty is 1, question must be genuinely introductory (e.g. 'what is a pod'), not accidentally hard just because the topic label sounds senior-level.", "case_type": "difficulty_topic_mismatch_trap" },
+
+    { "id": "qg_4", "topic": "React Hooks", "difficulty": 3, "history": [{"role": "interviewer", "content": "How do you handle state in React?"}, {"role": "candidate", "content": "I use Redux mostly."}],
+      "expected_judge_criteria": "Should build on the fact the candidate mentioned Redux specifically (e.g. useReducer vs Redux, or when to choose local state over Redux), not a generic unrelated Hooks question.", "case_type": "context_aware" },
+
+    { "id": "qg_5", "topic": "SQL Indexing", "difficulty": 4, "history": [
+        {"role": "interviewer", "content": "When would adding an index hurt performance?"},
+        {"role": "candidate", "content": "Indexes speed up reads but slow down writes since every insert has to update the index too."},
+        {"role": "interviewer", "content": "What about composite indexes and column order?"},
+        {"role": "candidate", "content": "Column order matters for which queries can use the index efficiently, leftmost prefix rule."}
+      ],
+      "expected_judge_criteria": "Two questions on this topic already covered well, next question should escalate (e.g. index selectivity, query planner behavior) rather than repeat similar ground.", "case_type": "repeated_topic_escalation_required" },
+
+    { "id": "qg_6", "topic": "System Design", "difficulty": 4, "history": [],
+      "expected_judge_criteria": "Topic is vague/broad, question must still be coherent, e.g. picking a concrete sub-problem (URL shortener, notification system) rather than something too generic to evaluate.", "case_type": "vague_broad_topic" },
+
+    { "id": "qg_7", "topic": "JavaScript Event Loop", "difficulty": 3, "history": [],
+      "expected_judge_criteria": "Must specifically relate to event loop / microtask-macrotask ordering / async timing, not a generic adjacent JS question like closures.", "case_type": "standard" },
+
+    { "id": "qg_8", "topic": "System Design: Rate Limiting", "difficulty": 2, "history": [
+        {"role": "interviewer", "content": "How would you design a rate limiter for an API?"},
+        {"role": "candidate", "content": "I don't really know, maybe just block users somehow."}
+      ],
+      "expected_judge_criteria": "Candidate gave a weak/non-answer at low difficulty, correct behavior is a supportive follow-up or simpler decomposition, not jumping to a harder or unrelated question.", "case_type": "weak_answer_followup_behavior" },
+
+    { "id": "qg_9", "topic": "Redis", "difficulty": 5, "history": [],
+      "expected_judge_criteria": "Must be a genuinely senior-level Redis question (e.g. persistence tradeoffs, cluster resharding, eviction policy edge cases), not a 'what is Redis' basic question.", "case_type": "standard" },
+
+    { "id": "qg_10", "topic": "gRPC", "difficulty": 1, "history": [],
+      "expected_judge_criteria": "gRPC sounds like an advanced topic, but difficulty 1 means the question should be introductory (e.g. what problem gRPC solves vs REST at a high level), not deep into streaming internals.", "case_type": "difficulty_topic_mismatch_trap" },
+
+    { "id": "qg_11", "topic": "Authentication", "difficulty": 3, "history": [
+        {"role": "interviewer", "content": "What's the difference between JWT and session auth?"},
+        {"role": "candidate", "content": "JWT doesn't need a database lookup and sessions do."}
+      ],
+      "expected_judge_criteria": "Candidate gave a correct but shallow answer, follow-up should probe deeper into the same claim (e.g. ask about revocation tradeoff) rather than moving to a new topic.", "case_type": "context_aware" },
+
+    { "id": "qg_12", "topic": "Caching", "difficulty": 4, "history": [],
+      "expected_judge_criteria": "Question should require reasoning about a specific caching strategy or tradeoff (cache-aside vs write-through, invalidation, thundering herd), not just 'what is caching'.", "case_type": "standard" },
+
+    { "id": "qg_13", "topic": "Testing", "difficulty": 2, "history": [],
+      "expected_judge_criteria": "Should be an approachable, foundational testing question suitable for difficulty 2 (e.g. unit vs integration test purpose), not an advanced mocking-framework internals question.", "case_type": "standard" },
+
+    { "id": "qg_14", "topic": "Testing", "difficulty": 5, "history": [
+        {"role": "interviewer", "content": "What's the difference between a mock and a stub?"},
+        {"role": "candidate", "content": "A mock lets you verify interactions, a stub just returns canned data."}
+      ],
+      "expected_judge_criteria": "Candidate answered well at a basic level, at difficulty 5 the follow-up should escalate meaningfully (e.g. test brittleness from over-mocking, contract testing, test pyramid tradeoffs), not repeat the same distinction.", "case_type": "repeated_topic_escalation_required" },
+
+    { "id": "qg_15", "topic": "Kubernetes", "difficulty": 3, "history": [
+        {"role": "interviewer", "content": "What does a Kubernetes Service do?"},
+        {"role": "candidate", "content": ""}
+      ],
+      "expected_judge_criteria": "Candidate gave an empty/non-answer, correct behavior is a supportive rephrase or simpler decomposition of the same question, not advancing to a harder unrelated topic.", "case_type": "weak_answer_followup_behavior" },
+
+    { "id": "qg_16", "topic": "Distributed Systems", "difficulty": 2, "history": [],
+      "expected_judge_criteria": "CAP theorem / distributed systems sounds advanced, but difficulty 2 means the question should be approachable (e.g. what does 'partition tolerance' mean intuitively), not deep into Paxos/Raft internals.", "case_type": "difficulty_topic_mismatch_trap" },
+
+    { "id": "qg_17", "topic": "Docker Basics", "difficulty": 1, "history": [],
+      "expected_judge_criteria": "Sanity-check control case: easy topic at easy difficulty should produce a genuinely basic question (e.g. 'what is a Docker image'). Confirms the harness isn't just penalizing every case.", "case_type": "standard_control" },
+
+    { "id": "qg_18", "topic": "Kubernetes Architecture", "difficulty": 5, "history": [],
+      "expected_judge_criteria": "Sanity-check control case: hard topic at hard difficulty should produce a genuinely advanced question (e.g. control plane internals, etcd consistency, scheduler extension points).", "case_type": "standard_control" },
+
+    { "id": "qg_19", "topic": "React Hooks", "difficulty": 5, "history": [],
+      "expected_judge_criteria": "Must be genuinely advanced (e.g. useLayoutEffect vs useEffect timing, custom hook memoization pitfalls, concurrent rendering implications), not a basic 'what is useState' question despite the accessible-sounding topic name.", "case_type": "difficulty_topic_mismatch_trap" },
+
+    { "id": "qg_20", "topic": "System Design: Rate Limiting", "difficulty": 5, "history": [
+        {"role": "interviewer", "content": "How would you design a rate limiter for an API?"},
+        {"role": "candidate", "content": "I'd use a token bucket algorithm with Redis for distributed consistency, and consider sliding window log for accuracy."}
+      ],
+      "expected_judge_criteria": "Candidate gave a strong, complete answer already, follow-up at difficulty 5 should probe an edge case not yet covered (e.g. handling clock skew across nodes, or rate limiting fairness across tenants), not repeat the same ground.", "case_type": "repeated_topic_escalation_required" },
+
+    { "id": "qg_21", "topic": "gRPC", "difficulty": 4, "history": [],
+      "expected_judge_criteria": "Should require reasoning about a real tradeoff (e.g. streaming modes, versioning/schema evolution with protobuf, load balancing considerations with HTTP/2 multiplexing), not a surface-level 'what is gRPC'.", "case_type": "standard" },
+
+    { "id": "qg_22", "topic": "Authentication", "difficulty": 5, "history": [],
+      "expected_judge_criteria": "Must require senior-level reasoning (e.g. token revocation strategies at scale, refresh token rotation attacks, OAuth flow tradeoffs), not a basic JWT-vs-session definitional question.", "case_type": "standard" }
+  ]
+}

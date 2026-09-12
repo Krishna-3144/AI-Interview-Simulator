@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Interview Simulator - Setup</title>
+<link rel="stylesheet" href="css/style.css?v=6.0.0"/>
+<!-- Use Inter for a clean modern look -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<nav class="top-nav">
+  <div class="logo-area">
+    <div class="brand-icon">S</div>
+    <span>Studio</span>
+  </div>
+  <div class="nav-links">
+    <a href="#" style="color: white; font-weight: 500;">Home</a>
+  </div>
+</nav>
+
+<section class="hero-dark">
+  <div style="display: inline-block; padding: 4px 12px; border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; font-size: 12px; margin-bottom: 24px; color: #9CA3AF;">
+    AI Interview Coach
+  </div>
+  <h1>Get set for a great interview.</h1>
+  <p style="margin: 0; max-width: 400px; line-height: 1.6;">Upload your resume, choose your interview settings, and let our AI tailor the experience to your goals.</p>
+</section>
+
+<div class="main-container">
+  
+  <form id="uploadForm">
+    
+    <!-- STEP 01: Upload Resume -->
+    <div class="white-card">
+      <div class="step-label">STEP 01</div>
+      <h2 class="card-title">Upload your resume</h2>
+      <p class="card-subtitle">We'll use your resume to personalize the interview questions.</p>
+      
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="resumeFile" accept=".pdf" hidden/>
+        <div class="upload-icon">📄</div>
+        <p id="uploadText">Drag & drop your resume here</p>
+        <p class="upload-hint">Supports PDF only (Max 5MB)</p>
+        <button type="button" class="btn btn-primary" style="margin-top: 16px;" onclick="document.getElementById('resumeFile').click()">Choose a file</button>
+      </div>
+
+      <div id="fileSelected" class="file-selected hidden">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span>📄</span>
+          <span id="fileName" style="color: var(--text-dark);">resume.pdf</span>
+        </div>
+        <span style="color: var(--success); font-size: 12px;">Uploaded successfully</span>
+      </div>
+    </div>
+    
+    <!-- STEP 02: Configure Interview -->
+    <div class="white-card">
+      <div class="step-label">STEP 02</div>
+      <h2 class="card-title">Configure your interview</h2>
+      <p class="card-subtitle">Choose a role, difficulty, and other preferences. We'll tailor the questions and feedback to match your goals.</p>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Job role / position</label>
+          <input type="text" class="styled-select" placeholder="Software Engineer" style="width: 100%; border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 10px 16px;">
+        </div>
+        
+        <div class="form-group">
+          <label>Interview type</label>
+          <select id="interviewType" name="interview_type" class="styled-select">
+            <option value="SDE">Technical</option>
+            <option value="Backend">Backend</option>
+            <option value="ML">Machine Learning</option>
+            <option value="HR">Behavioral</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Experience level</label>
+          <div class="pill-selector" id="expSelector">
+            <div class="pill">Fresher</div>
+            <div class="pill active">1-3 years</div>
+            <div class="pill">3-5 years</div>
+            <div class="pill">5+ years</div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Difficulty</label>
+          <div class="pill-selector" id="diffSelector">
+            <div class="pill">Easy</div>
+            <div class="pill active">Medium</div>
+            <div class="pill">Hard</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Number of questions</label>
+          <div class="pill-selector" id="numQSelector">
+            <div class="pill">5</div>
+            <div class="pill active">10</div>
+            <div class="pill">15</div>
+            <div class="pill">20</div>
+          </div>
+        </div>
+        
+        <div class="form-group" style="visibility: hidden; display: none;">
+          <label>Interview persona</label>
+          <select class="styled-select">
+            <option>🤖 Supportive (Coach)</option>
+            <option>🧐 Strict (Griller)</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="action-row">
+        <button type="submit" class="btn btn-primary" id="startBtn" disabled style="width: 200px;">
+          Start Interview →
+        </button>
+      </div>
+
+    </div>
+    
+  </form>
+
+  <div id="loading" class="loading hidden white-card" style="margin-top: 24px;">
+    <div class="spinner"></div>
+    <p style="margin-top: 16px; color: var(--text-muted);">Analysing your resume and preparing interview...</p>
+  </div>
+
+  <div id="error" class="error-msg hidden"></div>
+
+</div>
+
+<script src="config.js"></script>
+<script>
+const uploadZone = document.getElementById('uploadZone');
+const fileInput  = document.getElementById('resumeFile');
+const startBtn   = document.getElementById('startBtn');
+const fileSelected = document.getElementById('fileSelected');
+const fileName   = document.getElementById('fileName');
+const uploadText = document.getElementById('uploadText');
+const loading    = document.getElementById('loading');
+const errorDiv   = document.getElementById('error');
+const form       = document.getElementById('uploadForm');
+
+// Setup pill selector logic
+document.querySelectorAll('.pill-selector').forEach(selector => {
+  selector.addEventListener('click', e => {
+    if (e.target.classList.contains('pill')) {
+      selector.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+      e.target.classList.add('active');
+    }
+  });
+});
+
+function getActivePill(selectorId) {
+  const container = document.getElementById(selectorId);
+  if (!container) return "";
+  const active = container.querySelector('.pill.active');
+  return active ? active.textContent.trim() : "";
+}
+
+uploadZone.addEventListener('click', () => fileInput.click());
+
+uploadZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  uploadZone.classList.add('drag-over');
+});
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type === 'application/pdf') {
+    setFile(file);
+  } else if (file) {
+    alert('Please upload a PDF file. Other formats are not supported.');
+  }
+});
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) setFile(fileInput.files[0]);
+});
+
+function setFile(file) {
+  fileInput._file = file;
+  fileName.textContent = file.name;
+  fileSelected.classList.remove('hidden');
+  uploadZone.classList.add('hidden'); // Hides the drag-and-drop block
+  startBtn.disabled = false;
+}
+
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  const file = fileInput._file || fileInput.files[0];
+  if (!file) return;
+
+  loading.classList.remove('hidden');
+  form.classList.add('hidden');
+  errorDiv.classList.add('hidden');
+
+  const fd = new FormData();
+  fd.append('resume', file);
+  fd.append('interview_type', document.getElementById('interviewType').value);
+  fd.append('experience', getActivePill('expSelector'));
+  fd.append('difficulty', getActivePill('diffSelector'));
+  fd.append('num_questions', getActivePill('numQSelector'));
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/sessions`, { method: 'POST', body: fd });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    sessionStorage.setItem('session_id', data.session_id);
+    sessionStorage.setItem('candidate', JSON.stringify(data.candidate));
+    sessionStorage.setItem('first_question', data.first_question);
+    sessionStorage.setItem('first_topic', data.topic || '');
+    sessionStorage.setItem('first_difficulty', data.difficulty || 2);
+    sessionStorage.setItem('first_explanation', data.explanation || '');
+    window.location.href = 'interview.html';
+  } catch (err) {
+    loading.classList.add('hidden');
+    form.classList.remove('hidden');
+    errorDiv.textContent = 'Error: ' + err.message;
+    errorDiv.classList.remove('hidden');
+  }
+});
+</script>
+</body>
+</html>

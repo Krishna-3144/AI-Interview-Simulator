@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Interview — AI Interview Simulator</title>
+<link rel="stylesheet" href="css/style.css?v=6.1.0"/>
+<style>
+  .interview-layout-grid {
+    display: grid;
+    grid-template-columns: 250px 1fr 300px;
+    gap: 24px;
+    max-width: 1400px;
+    margin: -40px auto 40px auto;
+    padding: 0 20px;
+    position: relative;
+    z-index: 10;
+  }
+  @media (max-width: 980px) {
+    .interview-layout-grid { grid-template-columns: 1fr; }
+    .history-column { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<nav class="top-nav">
+  <div class="logo-area">
+    <div class="brand-icon">S</div>
+    <span>Studio</span>
+  </div>
+  <div class="nav-links">
+    <button class="btn btn-outline" id="endInterviewBtn" onclick="endInterview()" style="padding: 6px 16px; border-radius: 20px;">End Interview</button>
+  </div>
+</nav>
+
+<div class="interview-header" style="padding-top: 0; padding-bottom: 80px;">
+  <div class="ih-left">
+    <div style="color: var(--accent); font-weight: 700; font-size: 12px; letter-spacing: 1px; margin-bottom: 4px;">LIVE INTERVIEW</div>
+    <h2>You've got this.</h2>
+  </div>
+  <div class="ih-right" style="flex-direction: row; align-items: center; gap: 16px;">
+    <span class="badge" id="topicBadge" style="background: rgba(255,255,255,0.1); padding: 4px 12px; border-radius: 16px; font-size: 13px;">Loading...</span>
+    <span class="difficulty-badge" id="diffBadge" style="color: var(--accent); font-size: 13px; letter-spacing: 2px;">●●○○○</span>
+    <span id="candidateName" style="padding-left: 16px; border-left: 1px solid rgba(255,255,255,0.2); font-size: 14px;"></span>
+  </div>
+</div>
+
+<div class="interview-layout-grid">
+  
+  <!-- Left: Conversation history -->
+  <div class="history-column">
+    <div class="white-card" style="padding: 24px; height: 100%;">
+      <h3 style="font-size: 14px; margin-bottom: 16px; color: var(--text-muted);">Conversation</h3>
+      <div id="history" style="display: flex; flex-direction: column; gap: 12px; font-size: 13px; color: var(--text-muted);"></div>
+    </div>
+  </div>
+
+  <!-- Main: Active interview -->
+  <div>
+    <!-- Question card -->
+    <div class="chat-card" id="questionCard">
+      <div class="chat-profile" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <div class="avatar">AI</div>
+          <div class="profile-info">
+            <h4 style="font-size: 15px; font-family: var(--font-body); font-weight: 600;">Interviewer</h4>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+           <button id="playAudioBtn" onclick="playQuestionAudio()" class="btn-outline-light btn-sm" style="display:none; border-radius: 16px;">🔊 Listen</button>
+           <span class="badge hidden" id="followUpBadge" style="background: var(--accent-wash); color: var(--accent); padding: 4px 12px; border-radius: 16px; font-size: 12px;">Follow-up</span>
+        </div>
+      </div>
+
+      <p id="questionText" class="question-text">Loading your first question...</p>
+      
+      <div class="tip-box" id="explanationBox" style="display:none; background: #FAFAFA; border-radius: var(--radius-sm); padding: 12px; margin-top: 16px; border-top: none;">
+        <span style="color: var(--accent); font-weight: 600;">💡 Why this question:</span>
+        <span id="explanationText" style="color: var(--text-muted); font-size: 13px;"></span>
+      </div>
+    </div>
+
+    <!-- Answer area -->
+    <div class="chat-card">
+      <div class="answer-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <div class="mode-tabs">
+          <button class="mode-tab active" id="textTab" onclick="setMode('text')">⌨️ Type</button>
+          <button class="mode-tab" id="audioTab" onclick="setMode('audio')">🎙️ Voice</button>
+        </div>
+        <div class="skip-controls" style="display: flex; gap: 8px;">
+          <button class="btn btn-outline-light btn-sm" id="skipFollowupBtn" onclick="skipFollowup()" title="Skip follow-up questions" style="border-radius: 6px;">Skip Follow-up</button>
+          <button class="btn btn-outline-light btn-sm" id="skipTopicBtn" onclick="skipTopic()" title="Skip this topic" style="border-radius: 6px;">Skip Topic</button>
+        </div>
+      </div>
+
+      <!-- Text input -->
+      <div id="textMode">
+        <textarea id="answerText" class="answer-textarea" placeholder="Type your answer here..." rows="5"></textarea>
+        <button class="btn btn-primary" id="submitTextBtn" onclick="submitText()" style="margin-top: 16px; width: auto;">Submit Answer →</button>
+      </div>
+
+      <!-- Audio input -->
+      <div id="audioMode" style="display:none">
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <button class="btn btn-outline-light btn-record" id="recordBtn" onclick="toggleRecord()" style="padding: 12px 24px; border-radius: 8px; color: var(--danger); border-color: rgba(239, 68, 68, 0.4);">
+            🎙️ Tap to record
+          </button>
+          <div class="recording-indicator hidden" id="recordingIndicator" style="display: flex; align-items: center; gap: 8px; color: var(--danger);">
+            <span class="rec-dot"></span> Recording...
+          </div>
+        </div>
+        <div id="transcriptPreview" class="hidden" style="margin-top: 16px; padding: 12px; background: #FAFAFA; border-radius: var(--radius-sm); font-size: 13px; color: var(--text-muted);">
+          <strong style="color: var(--text-dark); display: block; margin-bottom: 4px;">Transcript:</strong>
+          <p id="transcriptText"></p>
+        </div>
+        <!-- Auto-submits on stop -->
+        <button class="btn btn-primary hidden" id="submitAudioBtn" onclick="submitAudio()" style="display:none; margin-top: 16px;">Submit Answer →</button>
+      </div>
+    </div>
+
+    <!-- Thinking indicator -->
+    <div id="thinking" class="hidden" style="display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">
+      <div class="spinner" style="width: 20px; height: 20px; border-width: 2px;"></div> Evaluating your answer...
+    </div>
+
+  </div>
+
+  <!-- Right: Live scores panel -->
+  <div>
+    <div class="white-card" style="padding: 24px; height: 100%;">
+      <h3 style="font-size: 14px; margin-bottom: 16px; color: var(--text-muted);">Live Feedback</h3>
+      <div id="scoresDisplay" style="font-size: 13px; color: var(--text-muted);">
+        <p>Scores appear after your first answer</p>
+      </div>
+      <div id="confidenceDisplay" class="hidden" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-light);">
+        <h4 style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">🎙️ Audio Analysis</h4>
+        <div id="confidenceMetrics"></div>
+      </div>
+      <button class="btn btn-outline-light" id="viewAnalysisBtn" onclick="openAnalysisModal()" style="width: 100%; margin-top: 20px; font-size: 13px;">🔍 View Detailed Analysis</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Detailed Analysis Modal -->
+<div id="analysisModal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px;">
+  <div style="background: white; border-radius: var(--radius-lg); width: 100%; max-width: 600px; padding: 24px; max-height: 80vh; overflow-y: auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-light); padding-bottom: 16px;">
+      <h2 style="font-size: 18px;">🔍 Turn-by-Turn Feedback Analysis</h2>
+      <button onclick="closeAnalysisModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted);">&times;</button>
+    </div>
+    <div id="analysisBody">
+      <div id="analysisDetails">
+        <p style="color: var(--text-muted);">No responses analyzed yet. Submit an answer to view breakdown.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="js/interview.js?v=7.1.1"></script>
+</body>
+</html>

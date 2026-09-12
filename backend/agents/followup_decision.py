@@ -17,6 +17,22 @@ def make_followup_decision(state: InterviewState) -> Dict[str, Any]:
     if phase in ("wrap_up", "report"):
         return {"next_action": "generate_report"}
 
+    if contradiction_found:
+        if follow_ups < settings.MAX_FOLLOW_UPS:
+            return {
+                "next_action": "clarify_contradiction", 
+                "follow_ups": follow_ups + 1, 
+                "contradiction_found": False
+            }
+        else:
+            # If we've reached the follow-up limit, reset the flag and move on
+            # to prevent an infinite loop, even if they keep contradicting themselves.
+            return {
+                "next_action": "advance_topic",
+                "follow_ups": 0,
+                "contradiction_found": False
+            }
+
     if phase == "technical":
         all_topics_complete = True
         for t in topics:
@@ -31,13 +47,6 @@ def make_followup_decision(state: InterviewState) -> Dict[str, Any]:
         
     if phase == "project_deep_dive":
         return {"next_action": "advance_topic", "follow_ups": 0}
-
-    if contradiction_found:
-        return {
-            "next_action": "clarify_contradiction", 
-            "follow_ups": follow_ups + 1, 
-            "contradiction_found": False
-        }
 
     missing_topics = latest_eval.get("missing_topics", [])
     if missing_topics and follow_ups < settings.MAX_FOLLOW_UPS:

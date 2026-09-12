@@ -8,13 +8,14 @@ load_dotenv()
 class Settings:
     # Groq
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
-    GROQ_MAIN_MODEL: str = os.getenv("GROQ_MAIN_MODEL", "llama-3.1-70b-versatile")
-    GROQ_FAST_MODEL: str = os.getenv("GROQ_FAST_MODEL", "llama-3.1-8b-instant")
+    GROQ_MAIN_MODEL: str = os.getenv("GROQ_MAIN_MODEL", "openai/gpt-oss-120b")
+    GROQ_FAST_MODEL: str = os.getenv("GROQ_FAST_MODEL", "openai/gpt-oss-20b")
 
     # App
     APP_HOST: str = os.getenv("APP_HOST", "0.0.0.0")
     APP_PORT: int = int(os.getenv("APP_PORT", "8000"))
     SECRET_KEY: str = os.getenv("SECRET_KEY", "dev-secret-key")
+    CORS_ORIGINS: list = os.getenv("CORS_ORIGINS", "*").split(",")
 
     # Storage outside OneDrive
     _user_home = os.path.expanduser("~")
